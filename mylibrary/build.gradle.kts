@@ -4,7 +4,6 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     id("com.android.library")
-    id("org.jetbrains.kotlin.android")
     id("maven-publish")
 }
 
@@ -37,15 +36,8 @@ android {
             jvmTarget.set(JvmTarget.JVM_17)
         }
     }
-}
-
-afterEvaluate {
     publishing {
-        publications {
-            create<MavenPublication>("release") {
-                from(components["release"])
-            }
-        }
+        singleVariant("release")
     }
 }
 
