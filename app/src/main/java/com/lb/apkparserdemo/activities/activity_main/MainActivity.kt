@@ -11,6 +11,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.annotation.AttrRes
 import androidx.annotation.ColorInt
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.core.view.*
 import androidx.lifecycle.ViewModelProvider
 import com.lb.apkparserdemo.R
@@ -80,30 +81,35 @@ class MainActivity : BoundActivity<ActivityMainBinding>(ActivityMainBinding::inf
                             viewModel.wrongApkTypeErrorsLiveData.value + viewModel.parsingErrorsLiveData.value
             binding.summaryNoteTextView.isVisible = isSystemAppCountAllWeGot
         }
-      addMenuProvider(object : MenuProvider {
+        addMenuProvider(object : MenuProvider {
             override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-                menuInflater.inflate(R.menu.main, menu)
+                menu.addSubMenu("More info").let { subMenu ->
+                    subMenu.setIcon(android.R.drawable.ic_menu_info_details)
+                    subMenu.item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+                    subMenu.add("Repository website").setOnMenuItemClickListener(
+                            createUrlMenuItemClickListener("https://github.com/AndroidDeveloperLB/apk-parser")
+                    )
+                    subMenu.add("All my repositories").setOnMenuItemClickListener(
+                            createUrlMenuItemClickListener("https://github.com/AndroidDeveloperLB")
+                    )
+                    subMenu.add("All my apps").setOnMenuItemClickListener(
+                            createUrlMenuItemClickListener("https://play.google.com/store/apps/developer?id=AndroidDeveloperLB")
+                    )
+                }
+            }
+
+            private fun createUrlMenuItemClickListener(url: String): MenuItem.OnMenuItemClickListener {
+                return MenuItem.OnMenuItemClickListener {
+                    val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+                    @Suppress("DEPRECATION")
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY or Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                    startActivity(intent)
+                    true
+                }
             }
 
             override fun onMenuItemSelected(item: MenuItem): Boolean {
-                var url: String? = null
-                when (item.itemId) {
-                    R.id.menuItem_all_my_apps -> url =
-                            "https://play.google.com/store/apps/developer?id=AndroidDeveloperLB"
-
-                    R.id.menuItem_all_my_repositories -> url =
-                            "https://github.com/AndroidDeveloperLB"
-
-                    R.id.menuItem_current_repository_website -> url =
-                            "https://github.com/AndroidDeveloperLB/apk-parser"
-                }
-                if (url == null)
-                    return true
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                @Suppress("DEPRECATION")
-                intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY or Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET)
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
-                startActivity(intent)
                 return true
             }
         })
