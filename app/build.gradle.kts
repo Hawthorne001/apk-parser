@@ -49,7 +49,7 @@ dependencies {
     implementation("org.apache.commons:commons-compress:1.28.0")
 
     //  https://github.com/AndroidDeveloperLB/CommonUtils  https://jitpack.io/#AndroidDeveloperLB/CommonUtils/
-    implementation("com.github.AndroidDeveloperLB:CommonUtils:35")
+    implementation("com.github.AndroidDeveloperLB:CommonUtils:37")
     //    https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-core
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     //    https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-android
