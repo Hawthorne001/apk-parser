@@ -21,7 +21,6 @@ class MainActivity : BoundActivity<ActivityMainBinding>(ActivityMainBinding::inf
     private lateinit var viewModel: MainActivityViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
-
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(0))
         ViewCompat.setOnApplyWindowInsetsListener(binding.appBarLayout) { v, insets ->
