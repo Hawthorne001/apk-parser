@@ -37,9 +37,13 @@ android {
         }
     }
     publishing {
-        singleVariant("release")
+        singleVariant("release") {
+            withSourcesJar()
+            withJavadocJar()
+        }
     }
 }
+
 
 dependencies {
     implementation(fileTree("libs") { include("*.jar") })
