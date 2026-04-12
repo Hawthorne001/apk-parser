@@ -94,18 +94,16 @@ public class ApkMetaTranslator implements XmlStreamer {
                 if (label != null) {
                     this.apkMetaBuilder.setLabel(label);
                 } else {
-                    //workaround in case the real label can't be found, so we at least try to use the package name with the application class
+                    // Match Android's PackageItemInfo.loadLabel() logic:
+                    // 1. labelRes/nonLocalizedLabel (already tried above)
+                    // 2. android:name (the class name)
+                    // 3. packageName
                     final String packageName = this.apkMetaBuilder.getPackageName();
-                    android.util.Log.d("AppLog", "label fetching: label attr NOT found for package: " + packageName);
-                    if (!TextUtils.isEmpty(packageName)) {
-                        final String applicationClassRelativePath = attributes.getString("name");
-                        if (TextUtils.isEmpty(applicationClassRelativePath)) {
-                            this.apkMetaBuilder.setLabel(packageName);
-                        } else {
-                            this.apkMetaBuilder.applicationClassRelativePath = applicationClassRelativePath;
-                            final String newLabel = packageName + applicationClassRelativePath;
-                            this.apkMetaBuilder.setLabel(newLabel);
-                        }
+                    final String className = attributes.getString("name");
+                    if (className != null) {
+                        this.apkMetaBuilder.setLabel(className);
+                    } else {
+                        this.apkMetaBuilder.setLabel(packageName);
                     }
                 }
                 final List<IconPath> allIconPaths = new ArrayList<>();
