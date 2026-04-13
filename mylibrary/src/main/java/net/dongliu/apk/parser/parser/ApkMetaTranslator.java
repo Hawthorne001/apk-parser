@@ -1,7 +1,5 @@
 package net.dongliu.apk.parser.parser;
 
-import android.text.TextUtils;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -37,12 +35,13 @@ public class ApkMetaTranslator implements XmlStreamer {
     private int depth = 0;
     @NonNull
     private final ApkMeta.Builder apkMetaBuilder = ApkMeta.newBuilder();
-    private List<IconPath> iconPaths = Collections.emptyList();
+    private List<IconPath> iconPaths = new ArrayList<>();
     private long labelResId = 0;
 
     private final ResourceTable resourceTable;
     @Nullable
     private final java.util.List<Locale> locales;
+    private java.util.Set<Locale> allLocales = java.util.Collections.emptySet();
 
     public ApkMetaTranslator(final @NonNull ResourceTable resourceTable, @Nullable final Locale locale) {
         this.resourceTable = resourceTable;
@@ -54,6 +53,10 @@ public class ApkMetaTranslator implements XmlStreamer {
         this.locales = locales;
     }
 
+    public void setAllLocales(java.util.Set<Locale> allLocales) {
+        this.allLocales = allLocales;
+    }
+
     @Override
     public void onStartTag(final @NonNull XmlNodeStartTag xmlNodeStartTag) {
         final Attributes attributes = xmlNodeStartTag.attributes;
@@ -61,14 +64,12 @@ public class ApkMetaTranslator implements XmlStreamer {
         // android.util.Log.d("AppLog", "icon fetching: manifest tag encountered: <" + xmlNodeStartTagName + ">");
         switch (xmlNodeStartTagName) {
             case "application": {
-                // android.util.Log.d("AppLog", "icon fetching: checking tag <application> for icons");
                 for (Attribute attr : attributes.attributes) {
                     if (attr == null) continue;
                     String typeStr = attr.typedValue != null ? attr.typedValue.getClass().getSimpleName() : "null";
-                    android.util.Log.d("AppLog", "label fetching: application attr: " + attr.name + "=" + attr.value + " (type: " + typeStr + ")");
+                    android.util.Log.d("AppLog", "label fetching: application attr: " + attr.name + "=" + attr.value + " (type: " + typeStr + ") split=" + this.apkMetaBuilder.split + " configForSplit=" + this.apkMetaBuilder.configForSplit);
                 }
                 this.apkMetaBuilder.setDebuggable(attributes.getBoolean("debuggable", false));
-                //TODO fix this part in a better way. Workaround for this: https://github.com/hsiafan/apk-parser/issues/119
                 if (this.apkMetaBuilder.split == null)
                     this.apkMetaBuilder.setSplit(attributes.getString("split"));
                 if (this.apkMetaBuilder.configForSplit == null)
@@ -79,7 +80,7 @@ public class ApkMetaTranslator implements XmlStreamer {
                     this.apkMetaBuilder.setIsSplitRequired(attributes.getBoolean("isSplitRequired", false));
                 if (!this.apkMetaBuilder.isolatedSplits)
                     this.apkMetaBuilder.setIsolatedSplits(attributes.getBoolean("isolatedSplits", false));
-                
+
                 Attribute labelAttr = attributes.get("label");
                 String label;
                 if (labelAttr != null && labelAttr.typedValue instanceof net.dongliu.apk.parser.struct.ResourceValue.ReferenceResourceValue) {
@@ -94,10 +95,6 @@ public class ApkMetaTranslator implements XmlStreamer {
                 if (label != null) {
                     this.apkMetaBuilder.setLabel(label);
                 } else {
-                    // Match Android's PackageItemInfo.loadLabel() logic:
-                    // 1. labelRes/nonLocalizedLabel (already tried above)
-                    // 2. android:name (the class name)
-                    // 3. packageName
                     final String packageName = this.apkMetaBuilder.getPackageName();
                     final String className = attributes.getString("name");
                     if (className != null) {
@@ -134,68 +131,40 @@ public class ApkMetaTranslator implements XmlStreamer {
             case "instrumentation":
             case "permission-group":
             case "meta-data": {
-                // android.util.Log.d("AppLog", "icon fetching: checking tag <" + xmlNodeStartTagName + "> for icons");
-                for (Attribute attr : attributes.attributes) {
-                    // if (attr == null) continue;
-                    // android.util.Log.d("AppLog", "icon fetching: " + xmlNodeStartTagName + " attr: " + attr.name + "=" + attr.value);
-                }
-                final List<IconPath> allIconPaths = new ArrayList<>(this.iconPaths);
                 final Attribute iconAttr = attributes.get("icon");
                 if (iconAttr != null) {
-                    allIconPaths.addAll(this.extractIconPaths(iconAttr, "icon"));
+                    this.iconPaths.addAll(this.extractIconPaths(iconAttr, "icon"));
                 }
                 final Attribute roundIconAttr = attributes.get("roundIcon");
                 if (roundIconAttr != null) {
-                    allIconPaths.addAll(this.extractIconPaths(roundIconAttr, "roundIcon"));
+                    this.iconPaths.addAll(this.extractIconPaths(roundIconAttr, "roundIcon"));
                 }
                 final Attribute logoAttr = attributes.get("logo");
                 if (logoAttr != null) {
-                    allIconPaths.addAll(this.extractIconPaths(logoAttr, "logo"));
+                    this.iconPaths.addAll(this.extractIconPaths(logoAttr, "logo"));
                 }
                 final Attribute bannerAttr = attributes.get("banner");
                 if (bannerAttr != null) {
-                    allIconPaths.addAll(this.extractIconPaths(bannerAttr, "banner"));
+                    this.iconPaths.addAll(this.extractIconPaths(bannerAttr, "banner"));
                 }
-                this.iconPaths = allIconPaths;
                 break;
             }
-            case "manifest": {
-                final String packageName = attributes.getString("package");
-                this.apkMetaBuilder.setPackageName(packageName);
-                if (TextUtils.isEmpty(this.apkMetaBuilder.getLabel()) && !TextUtils.isEmpty(packageName)) {
-                    //workaround in case the real label can't be found, so we at least try to use the package name with the application class
-                    final String applicationClassRelativePath = this.apkMetaBuilder.applicationClassRelativePath;
-                    if (TextUtils.isEmpty(applicationClassRelativePath)) {
-                        this.apkMetaBuilder.setLabel(packageName);
-                    } else {
-                        final String newLabel = packageName + applicationClassRelativePath;
-                        this.apkMetaBuilder.setLabel(newLabel);
-                    }
-                }
+            case "manifest":
+                this.apkMetaBuilder.setPackageName(attributes.getString("package"));
                 this.apkMetaBuilder.setVersionName(attributes.getString("versionName"));
                 this.apkMetaBuilder.setRevisionCode(attributes.getLong("revisionCode"));
                 this.apkMetaBuilder.setSharedUserId(attributes.getString("sharedUserId"));
                 this.apkMetaBuilder.setSharedUserLabel(attributes.getString("sharedUserLabel"));
-                if (this.apkMetaBuilder.split == null)
-                    this.apkMetaBuilder.setSplit(attributes.getString("split"));
-                if (this.apkMetaBuilder.configForSplit == null)
-                    this.apkMetaBuilder.setConfigForSplit(attributes.getString("configForSplit"));
-                if (!this.apkMetaBuilder.isFeatureSplit)
-                    this.apkMetaBuilder.setIsFeatureSplit(attributes.getBoolean("isFeatureSplit", false));
-                if (!this.apkMetaBuilder.isSplitRequired)
-                    this.apkMetaBuilder.setIsSplitRequired(attributes.getBoolean("isSplitRequired", false));
-                if (!this.apkMetaBuilder.isolatedSplits)
-                    this.apkMetaBuilder.setIsolatedSplits(attributes.getBoolean("isolatedSplits", false));
-                final Long majorVersionCode = attributes.getLong("versionCodeMajor");
-                Long versionCode = attributes.getLong("versionCode");
-                if (majorVersionCode != null) {
-                    if (versionCode == null) {
-                        versionCode = 0L;
-                    }
-                    versionCode = (majorVersionCode << 32) | (versionCode & 0xFFFFFFFFL);
-                }
-                if (versionCode != null)
+                this.apkMetaBuilder.setSplit(attributes.getString("split"));
+                this.apkMetaBuilder.setConfigForSplit(attributes.getString("configForSplit"));
+                this.apkMetaBuilder.setIsFeatureSplit(attributes.getBoolean("isFeatureSplit", false));
+                this.apkMetaBuilder.setIsSplitRequired(attributes.getBoolean("isSplitRequired", false));
+                this.apkMetaBuilder.setIsolatedSplits(attributes.getBoolean("isolatedSplits", false));
+
+                final Long versionCode = attributes.getLong("versionCode");
+                if (versionCode != null) {
                     this.apkMetaBuilder.setVersionCode(versionCode);
+                }
                 final String installLocation = attributes.getString("installLocation");
                 if (installLocation != null) {
                     this.apkMetaBuilder.setInstallLocation(installLocation);
@@ -205,91 +174,57 @@ public class ApkMetaTranslator implements XmlStreamer {
                 this.apkMetaBuilder.setPlatformBuildVersionCode(attributes.getString("platformBuildVersionCode"));
                 this.apkMetaBuilder.setPlatformBuildVersionName(attributes.getString("platformBuildVersionName"));
                 break;
-            }
-            case "uses-sdk": {
-                final String minSdkVersion = attributes.getString("minSdkVersion");
-                if (minSdkVersion != null) {
-                    this.apkMetaBuilder.setMinSdkVersion(minSdkVersion);
-                }
-                final String targetSdkVersion = attributes.getString("targetSdkVersion");
-                if (targetSdkVersion != null) {
-                    this.apkMetaBuilder.setTargetSdkVersion(targetSdkVersion);
-                }
-                final String maxSdkVersion = attributes.getString("maxSdkVersion");
-                if (maxSdkVersion != null) {
-                    this.apkMetaBuilder.setMaxSdkVersion(maxSdkVersion);
-                }
+            case "uses-sdk":
+                this.apkMetaBuilder.setMinSdkVersion(attributes.getString("minSdkVersion"));
+                this.apkMetaBuilder.setTargetSdkVersion(attributes.getString("targetSdkVersion"));
+                this.apkMetaBuilder.setMaxSdkVersion(attributes.getString("maxSdkVersion"));
                 break;
-            }
-            case "supports-screens": {
+            case "supports-screens":
                 this.apkMetaBuilder.setAnyDensity(attributes.getBoolean("anyDensity", false));
                 this.apkMetaBuilder.setSmallScreens(attributes.getBoolean("smallScreens", false));
                 this.apkMetaBuilder.setNormalScreens(attributes.getBoolean("normalScreens", false));
                 this.apkMetaBuilder.setLargeScreens(attributes.getBoolean("largeScreens", false));
                 break;
-            }
-            case "uses-feature": {
+            case "uses-feature":
                 final String name = attributes.getString("name");
-                final boolean required = attributes.getBoolean("required", false);
+                final boolean required = attributes.getBoolean("required", true);
                 if (name != null) {
                     final UseFeature useFeature = new UseFeature(name, required);
                     this.apkMetaBuilder.addUsesFeature(useFeature);
                 } else {
                     final Integer gl = attributes.getInt("glEsVersion");
                     if (gl != null) {
-                        final int v = gl;
-                        final GlEsVersion glEsVersion = new GlEsVersion(v >> 16, v & 0xffff, required);
-                        this.apkMetaBuilder.setGlEsVersion(glEsVersion);
+                        this.apkMetaBuilder.setGlEsVersion(new GlEsVersion(gl >> 16, gl & 0xffff, required));
                     }
                 }
                 break;
-            }
-            case "uses-permission": {
+            case "uses-permission":
                 this.apkMetaBuilder.addUsesPermission(attributes.getString("name"));
                 break;
-            }
-            case "permission": {
-                // android.util.Log.d("AppLog", "icon fetching: checking tag <permission> for icons");
-                for (Attribute attr : attributes.attributes) {
-                    // if (attr == null) continue;
-                    // android.util.Log.d("AppLog", "icon fetching: permission attr: " + attr.name + "=" + attr.value);
-                }
-                final List<IconPath> allIconPaths = new ArrayList<>(this.iconPaths);
-                final Attribute iconAttr = attributes.get("icon");
-                if (iconAttr != null) {
-                    allIconPaths.addAll(this.extractIconPaths(iconAttr, "icon"));
-                }
-                this.iconPaths = allIconPaths;
-
-                final Permission permission = new Permission(
-                        attributes.getString("name"),
-                        attributes.getString("label"),
-                        attributes.getString("icon"),
-                        attributes.getString("description"),
-                        attributes.getString("group"),
-                        attributes.getString("android:protectionLevel"));
-                this.apkMetaBuilder.addPermissions(permission);
+            case "permission":
+                this.apkMetaBuilder.addPermissions(new Permission(attributes.getString("name"), attributes.getString("label"),
+                        null, attributes.getString("description"),
+                        attributes.getString("group"), attributes.getString("protectionLevel")));
                 break;
-            }
         }
         this.tagStack[this.depth++] = xmlNodeStartTagName;
     }
 
     @Override
-    public void onEndTag(@NonNull final XmlNodeEndTag xmlNodeEndTag) {
+    public void onEndTag(final @NonNull XmlNodeEndTag xmlNodeEndTag) {
         this.depth--;
     }
 
     @Override
-    public void onCData(@NonNull final XmlCData xmlCData) {
+    public void onCData(final @NonNull XmlCData xmlCData) {
     }
 
     @Override
-    public void onNamespaceStart(@NonNull final XmlNamespaceStartTag tag) {
+    public void onNamespaceStart(final @NonNull XmlNamespaceStartTag xmlNamespaceStartTag) {
     }
 
     @Override
-    public void onNamespaceEnd(@NonNull final XmlNamespaceEndTag tag) {
+    public void onNamespaceEnd(final @NonNull XmlNamespaceEndTag xmlNamespaceEndTag) {
     }
 
     @NonNull
@@ -306,7 +241,7 @@ public class ApkMetaTranslator implements XmlStreamer {
         List<ResourceTable.Resource> resources = this.resourceTable.getResourcesById(this.labelResId);
         java.util.Map<Locale, String> map = new java.util.HashMap<>();
         for (ResourceTable.Resource resource : resources) {
-            String value = resource.resourceEntry.toStringValue(this.resourceTable, resource.type.locale);
+            String value = resource.resourceEntry.toStringValue(this.resourceTable, (Locale) null);
             if (value != null) {
                 map.put(resource.type.locale, value);
             }
@@ -316,20 +251,17 @@ public class ApkMetaTranslator implements XmlStreamer {
 
     @NonNull
     public List<IconPath> getIconPaths() {
-        if (this.iconPaths.isEmpty()) {
-            // android.util.Log.d("AppLog", "icon fetching: getIconPaths() returned empty list");
-        }
         return this.iconPaths;
     }
 
     private List<IconPath> extractIconPaths(Attribute iconAttr, String attrName) {
         final ResourceValue resourceValue = iconAttr.typedValue;
         if (resourceValue != null) {
-            // android.util.Log.d("AppLog", "icon fetching: extracting " + attrName + ", typedValue type: " + resourceValue.getClass().getSimpleName() + " data: " + resourceValue.toStringValue(resourceTable, locale));
+            android.util.Log.d("AppLog", "icon fetching: extracting " + attrName + ", typedValue type: " + resourceValue.getClass().getSimpleName());
         }
         if (resourceValue instanceof ResourceValue.ReferenceResourceValue) {
-            long resId = ((ResourceValue.ReferenceResourceValue) resourceValue).getReferenceResourceId();
-            // android.util.Log.d("AppLog", "icon fetching: extracting " + attrName + " from reference ID 0x" + Long.toHexString(resId));
+            long resId = ((net.dongliu.apk.parser.struct.ResourceValue.ReferenceResourceValue) resourceValue).getReferenceResourceId();
+            android.util.Log.d("AppLog", "icon fetching: extracting " + attrName + " from reference ID 0x" + Long.toHexString(resId));
             return extractIconPathsById(resId, attrName, new java.util.HashSet<Long>());
         } else {
             final String value = iconAttr.value;
@@ -338,7 +270,7 @@ public class ApkMetaTranslator implements XmlStreamer {
                 final IconPath iconPath = new IconPath(value, Densities.DEFAULT);
                 return Collections.singletonList(iconPath);
             } else {
-                // android.util.Log.d("AppLog", "icon fetching: " + attrName + " attribute exists but has no value");
+                android.util.Log.d("AppLog", "icon fetching: " + attrName + " attribute exists but has no value");
             }
         }
         return Collections.emptyList();
@@ -350,7 +282,7 @@ public class ApkMetaTranslator implements XmlStreamer {
 
         final List<ResourceTable.Resource> resources = this.resourceTable.getResourcesById(resourceId);
         if (resources.isEmpty()) {
-            // android.util.Log.d("AppLog", "icon fetching: no resources found for ID 0x" + Long.toHexString(resourceId));
+            android.util.Log.d("AppLog", "icon fetching: no resources found for ID 0x" + Long.toHexString(resourceId));
             // Check if this might be a system resource that wasn't in our table
             if ((resourceId >> 24) == 0x01) {
                 String path = "resourceId:0x" + Long.toHexString(resourceId);
@@ -368,7 +300,7 @@ public class ApkMetaTranslator implements XmlStreamer {
                 long nextId = ((ResourceValue.ReferenceResourceValue) resourceEntry.value).getReferenceResourceId();
                 icons.addAll(extractIconPathsById(nextId, attrName, visitedIds));
             } else {
-                final String path = resourceEntry.toStringValue(this.resourceTable, (this.locales != null && !this.locales.isEmpty()) ? this.locales.get(0) : java.util.Locale.getDefault());
+                final String path = resourceEntry.toStringValue(this.resourceTable, (java.util.Locale) null);
                 if (path == null) continue;
                 if (resource.type.density == Densities.DEFAULT) {
                     hasDefault = true;
@@ -384,7 +316,7 @@ public class ApkMetaTranslator implements XmlStreamer {
     }
 
     private void updateApkMetaIcon(String path, String attrName) {
-        // android.util.Log.d("AppLog", "icon fetching: discovered " + attrName + " path: " + path);
+        android.util.Log.d("AppLog", "icon fetching: discovered " + attrName + " path: " + path);
         if ("icon".equals(attrName)) {
             this.apkMetaBuilder.setIcon(path);
         } else if ("roundIcon".equals(attrName)) {
@@ -395,12 +327,11 @@ public class ApkMetaTranslator implements XmlStreamer {
     }
 
     private boolean matchTagPath(final String... tags) {
-        // the root should always be "manifest"
-        if (this.depth != tags.length + 1) {
+        if (this.depth < tags.length) {
             return false;
         }
-        for (int i = 1; i < this.depth; i++) {
-            if (!this.tagStack[i].equals(tags[i - 1])) {
+        for (int i = 1; i <= tags.length; i++) {
+            if (!this.tagStack[this.depth - i].equals(tags[tags.length - i])) {
                 return false;
             }
         }
@@ -408,7 +339,6 @@ public class ApkMetaTranslator implements XmlStreamer {
     }
 
     private boolean matchLastTag(final String tag) {
-        // the root should always be "manifest"
-        return this.tagStack[this.depth - 1].endsWith(tag);
+        return this.depth > 0 && this.tagStack[this.depth - 1].equals(tag);
     }
 }

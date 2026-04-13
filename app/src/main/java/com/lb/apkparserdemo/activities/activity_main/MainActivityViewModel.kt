@@ -15,6 +15,7 @@ import kotlinx.coroutines.*
 import net.dongliu.apk.parser.parser.ResourceTableParser
 import net.dongliu.apk.parser.struct.AndroidConstants
 import net.dongliu.apk.parser.struct.resource.ResourceTable
+import net.dongliu.apk.parser.utils.Locales
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream
 import java.io.FileInputStream
 import java.nio.ByteBuffer
@@ -75,7 +76,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-                     it.add("com.google.pixel.livewallpaper")
+//                     it.add("com.google.android.apps.nexuslauncher")
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
@@ -96,32 +97,22 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             val allApkFilePaths = listOf(baseApkPath) + splitApkPaths
 
             // Always build master table if splits exist, to ensure correct labels/icons
-            val masterResourceTable: ResourceTable? = if (splitApkPaths.isNotEmpty()) {
-                val table = ResourceTable(null)
-                for (apkPath in allApkFilePaths) {
-                    getZipFilter(apkPath, ZIP_FILTER_TYPE).use { filter ->
-                        val resBytes = filter.getByteArrayForEntries(emptySet(), hashSetOf(AndroidConstants.RESOURCE_FILE))?.get(AndroidConstants.RESOURCE_FILE)
-                        if (resBytes != null) {
-                            try {
-                                val parser = ResourceTableParser(ByteBuffer.wrap(resBytes))
-                                parser.parse()
-                                table.merge(parser.resourceTable)
-                            } catch (e: Exception) {
-                                Log.e("AppLog", "failed to parse resources of $apkPath: ${e.message}")
-                            }
-                        }
-                    }
-                }
-                table
-            } else null
-
-            val apkInfo = getZipFilter(baseApkPath, ZIP_FILTER_TYPE).use { filter ->
-                try {
-                    ApkInfo.internalGetApkInfo(localeList, filter, requestParseManifestXmlTagForApkType = GET_APK_TYPE, requestParseResources = VALIDATE_RESOURCES, masterResourceTable = masterResourceTable)
-                } catch (e: Throwable) {
-                    Log.e("AppLog", "failed to parse apk for $packageName", e)
-                    null
-                }
+            val apkInfo = try {
+                val filters = allApkFilePaths.map { getZipFilter(it, ZIP_FILTER_TYPE) }
+                val info = ApkInfo.getConsolidatedApkInfo(
+                    localeList, filters,
+                    requestParseManifestXmlTagForApkType = GET_APK_TYPE,
+                    requestParseResources = VALIDATE_RESOURCES
+                )
+                // We shouldn't close them if we still need them?
+                // Actually, getConsolidatedApkInfo uses them to parse resources.
+                // Once it returns, they can be closed UNLESS we want to keep using them.
+                // But in this loop, we create new ones for icons anyway.
+                filters.forEach { try { it.close() } catch (ignored: Exception) {} }
+                info
+            } catch (e: Throwable) {
+                Log.e("AppLog", "failed to parse apk for $packageName", e)
+                null
             }
 
             if (apkInfo == null) {
@@ -143,7 +134,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                 if (packageInfo.applicationInfo!!.icon != 0 && appIcon == null) {
                     failedGettingAppIconErrorsLiveData.inc()
                     if (isSystemApp) systemAppsErrorsCountLiveData.inc()
-                    // Log.e("AppLog", "icon fetching: can\'t get app icon for \"$packageName\" in: \"$baseApkPath\"")
+                     Log.e("AppLog", "icon fetching: can\'t get app icon for \"$packageName\" in: \"$baseApkPath\"")
                     // Log all entries in all APKs to see if the requested path exists
                     for (apkPath in allApkFilePaths) {
                         try {
@@ -224,6 +215,9 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                     Log.e("AppLog", "label fetching: mismatch for \"${packageName}\": correct=${potentialLabels.joinToString(prefix = "\"", postfix = "\"", separator = "\\")} ($frameworkHex) vs found=\"$labelOfLibrary\" ($libraryHex)")
                     Log.e("AppLog", "label fetching: All library translations for \"$packageName\": $allLibraryLabels")
                     Log.e("AppLog", "label fetching: System locale list: $localeList. APK all locales: ${currentApkInfo.allLocales}")
+                    packageInfo.applicationInfo?.let { appInfo ->
+                        Log.e("AppLog", "label fetching: Framework appInfo nonLocalizedLabel: ${appInfo.nonLocalizedLabel}, labelRes: 0x${Integer.toHexString(appInfo.labelRes)}")
+                    }
                 }
             }
             // Log.d("AppLog", "apk data of $baseApkPath : ${apkMeta.packageName}, ${apkMeta.versionCode}, ${apkMeta.versionName}, $labelOfLibrary, ${apkMetaTranslator.iconPaths}")

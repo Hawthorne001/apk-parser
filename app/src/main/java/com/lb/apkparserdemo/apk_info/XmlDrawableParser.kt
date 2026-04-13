@@ -34,7 +34,7 @@ object XmlDrawableParser {
             val fallbackBuffer = ByteBuffer.wrap(binXml)
             val fallbackBinaryXmlParser = BinaryXmlParser(fallbackBuffer, apkInfo.resourceTable, xmlTranslator, locale)
             fallbackBinaryXmlParser.parse()
-            // val xml = xmlTranslator.xml
+            val xml = xmlTranslator.xml
             // android.util.Log.d("AppLog", "icon fetching: XML content:\n$xml")
         } catch (e: Exception) {
             // android.util.Log.d("AppLog", "icon fetching: failed to log XML content: ${e.message}")

@@ -26,7 +26,7 @@ public class ResourceTable {
     public final StringPool stringPool;
     @NonNull
     public static final Map<Integer, String> sysStyle = ResourceLoader.loadSystemStyles();
-    private final Set<Locale> locales = new HashSet<>();
+    public final Set<Locale> locales = new HashSet<>();
 
     public ResourceTable(@Nullable final StringPool stringPool) {
         this.stringPool = stringPool;
@@ -71,6 +71,9 @@ public class ResourceTable {
     }
 
     public Set<Locale> getLocales() {
+        if (locales.isEmpty() && !packageMap.isEmpty()) {
+            updateLocales();
+        }
         return locales;
     }
 

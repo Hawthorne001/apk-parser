@@ -22,22 +22,33 @@ object Locales {
         }
         val lang1 = normalizeLanguage(locale.language)
         val lang2 = normalizeLanguage(targetLocale.language)
-        val languageMatch = lang1 == lang2
-        if (languageMatch) {
-            if (locale.country == targetLocale.country) {
-                return 4
-            }
-            if (targetLocale.country.isEmpty()) {
-                return 3
-            }
-            // Pseudolocale check: en-XA, ar-XB, etc.
-            // These should have lower priority than the default locale (1) if they don't match exactly.
-            if (targetLocale.country == "XA" || targetLocale.country == "XB") {
-                return 0
-            }
-            return 2
+        
+        if (lang2.isEmpty()) {
+            if (lang1 == "en") return 2 // For English, Default is a language match
+            return 1 // Default matches everything else at level 1
         }
-        return if (targetLocale.language.isEmpty()) 1 else 0
+        
+        if (lang1 != lang2) {
+            return 0
+        }
+
+        val country1 = locale.country
+        val country2 = targetLocale.country
+
+        if (country1 == country2) {
+            return 4 // Exact match
+        }
+        
+        if (country2.isEmpty()) {
+            return 3 // Language match
+        }
+
+        // Pseudolocale check
+        if (country2 == "XA" || country2 == "XB") {
+            return 0
+        }
+
+        return 2 // Language match, country mismatch
     }
 
     /**
@@ -52,23 +63,72 @@ object Locales {
             val level = match(locales.get(i), targetLocale)
             if (level >= 1) {
                 // Primary weight: Position in the user's preference list.
-                // Secondary weight: Match perfection level.
-                // Tertiary weight: Country code alphabetical tie-breaker.
-                
                 var score = (locales.size - i).toLong() * 10000 + level * 1000
                 
-                val country = targetLocale.country
-                if (country.length == 2) {
-                    // Alphabetical tie-breaker: favor earlier country codes (AU > CA).
-                    score += (90 - country[0].code) * 30 + (90 - country[1].code)
-                } else if (targetLocale.language.isNotEmpty()){
-                    score += 900 // Prefer language-only (Level 3) over mismatched country (Level 2)
+                val country1 = locales.get(i).country
+                val country2 = targetLocale.country
+                if (country2.length == 2) {
+                    // Tie-breaker within the same locale and level.
+                    if (country1 == country2) score += 995
+                    else if (isInternationalEnglish(country1) && isInternationalEnglish(country2)) {
+                        // International English tie-breaker: prefer GB as standard.
+                        if (country2 == "GB") score += 990
+                        else if (country2 == "US") score += 985
+                        else {
+                            // Alphabetical
+                            score += (90 - country2[0].code) * 2 + (90 - country2[1].code) / 10
+                        }
+                    } else if (country2 == "GB") score += 800
+                    else if (country2 == "US") score += 750
+                    else {
+                        score += (90 - country2[0].code) * 5 + (90 - country2[1].code)
+                    }
+                } else if (targetLocale.language.isNotEmpty()) {
+                    score += 980
+                } else if (normalizeLanguage(locales.get(i).language) == "en") {
+                    // For English users, prefer Default over "cousins" that are not international English matches
+                    score += 970
                 }
                 return score
             }
         }
         
         return 0
+    }
+
+    private fun isInternationalEnglish(country: String): Boolean {
+        return when (country) {
+            "001", "150", "GB", "AU", "NZ", "IE", "IL", "IN", "ZA", "SG", "HK", "MT", "MY", "PK" -> true
+            else -> false
+        }
+    }
+
+    /**
+     * Get the best matching locale from the app's supported locales for the given user preference list.
+     */
+    @JvmStatic
+    fun getBestMatch(locales: List<Locale>, appLocales: Set<Locale>): Locale {
+        var bestLocale = any
+        var maxScore: Long = -1
+        for (appLocale in appLocales) {
+            val score = matchScore(locales, appLocale)
+            if (score > maxScore) {
+                maxScore = score
+                bestLocale = appLocale
+            }
+        }
+        return bestLocale
+    }
+
+    /**
+     * Check if 'candidate' is a valid fallback for 'target'.
+     * e.g., 'en' is a parent of 'en_AU', and '' is a parent of 'en'.
+     */
+    @JvmStatic
+    fun isParent(target: Locale, candidate: Locale): Boolean {
+        if (candidate.language.isEmpty()) return true
+        if (candidate.language != target.language) return false
+        return candidate.country.isEmpty() || candidate.country == target.country
     }
 
     private fun normalizeLanguage(language: String): String {
