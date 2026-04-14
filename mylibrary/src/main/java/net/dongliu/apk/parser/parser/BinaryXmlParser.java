@@ -71,35 +71,32 @@ public class BinaryXmlParser {
         this.locale = locale == null ? Locales.any : locale;
     }
 
-    /**
-     * Parse binary xml.
-     */
     public void parse() {
-        final ChunkHeader firstChunkHeader = this.readChunkHeader();
+        ChunkHeader firstChunkHeader = this.readChunkHeader();
         if (firstChunkHeader == null) {
             return;
         }
-        switch ((int) firstChunkHeader.chunkType) {
-            case ChunkType.XML:
-            case ChunkType.NULL:
-                break;
-            case ChunkType.STRING_POOL:
-            default:
-                // strange chunk header type, just skip this chunk header?
+
+        if (firstChunkHeader.chunkType == ChunkType.XML) {
+            firstChunkHeader = this.readChunkHeader();
         }
-        // read string pool chunk
-        final ChunkHeader stringPoolChunkHeader = this.readChunkHeader();
-        if (stringPoolChunkHeader == null) {
+
+        if (firstChunkHeader == null) {
             return;
         }
-        ParseUtils.checkChunkType(ChunkType.STRING_POOL, stringPoolChunkHeader.chunkType);
+
+        // read string pool chunk
+        final ChunkHeader stringPoolChunkHeader = firstChunkHeader;
+        if (stringPoolChunkHeader.chunkType != ChunkType.STRING_POOL) {
+            throw new ParserException("Expected string pool chunk, but found: " + stringPoolChunkHeader.chunkType);
+        }
         this.stringPool = ParseUtils.readStringPool(this.buffer, (StringPoolHeader) stringPoolChunkHeader);
         // read on chunk, check if it was an optional XMLResourceMap chunk
         ChunkHeader chunkHeader = this.readChunkHeader();
         if (chunkHeader == null) {
             return;
         }
-        if ((int) chunkHeader.chunkType == ChunkType.XML_RESOURCE_MAP) {
+        if (chunkHeader.chunkType == ChunkType.XML_RESOURCE_MAP) {
             final long[] resourceIds = this.readXmlResourceMap((XmlResourceMapHeader) chunkHeader);
             this.resourceMap = new String[resourceIds.length];
             for (int i = 0; i < resourceIds.length; i++) {
@@ -135,7 +132,12 @@ public class BinaryXmlParser {
                         throw new ParserException("Unexpected chunk type:" + (int) chunkHeader.chunkType);
                     }
             }
-            Buffers.position(this.buffer, beginPos + chunkHeader.getBodySize());
+            long nextPos = beginPos + chunkHeader.getBodySize();
+            if (nextPos > this.buffer.limit() || nextPos < 0) {
+                android.util.Log.w("AppLog", "label fetching: invalid chunk size " + chunkHeader.getChunkSize() + " at " + beginPos + ". Limit: " + this.buffer.limit());
+                break;
+            }
+            Buffers.position(this.buffer, nextPos);
             chunkHeader = this.readChunkHeader();
         }
     }

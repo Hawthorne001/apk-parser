@@ -76,11 +76,12 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-//                     it.add("com.google.android.apps.nexuslauncher")
+                    it.add("com.unicell.pangoandroid")
+                    it.add("com.google.android.apps.nexuslauncher")
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
-                        .filter { appsToFocusOn.isEmpty()||appsToFocusOn.contains(it.packageName)}
+                        .filter { appsToFocusOn.isEmpty() || appsToFocusOn.contains(it.packageName) }
 
         var endTime = System.currentTimeMillis()
         Log.d("AppLog", "time taken: ${endTime - startTime}. total apps to process: ${installedPackages.size}")
@@ -100,15 +101,20 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             val apkInfo = try {
                 val filters = allApkFilePaths.map { getZipFilter(it, ZIP_FILTER_TYPE) }
                 val info = ApkInfo.getConsolidatedApkInfo(
-                    localeList, filters,
-                    requestParseManifestXmlTagForApkType = GET_APK_TYPE,
-                    requestParseResources = VALIDATE_RESOURCES
+                        localeList, filters,
+                        requestParseManifestXmlTagForApkType = GET_APK_TYPE,
+                        requestParseResources = VALIDATE_RESOURCES
                 )
                 // We shouldn't close them if we still need them?
                 // Actually, getConsolidatedApkInfo uses them to parse resources.
                 // Once it returns, they can be closed UNLESS we want to keep using them.
                 // But in this loop, we create new ones for icons anyway.
-                filters.forEach { try { it.close() } catch (ignored: Exception) {} }
+                filters.forEach {
+                    try {
+                        it.close()
+                    } catch (ignored: Exception) {
+                    }
+                }
                 info
             } catch (e: Throwable) {
                 Log.e("AppLog", "failed to parse apk for $packageName", e)
@@ -134,7 +140,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                 if (packageInfo.applicationInfo!!.icon != 0 && appIcon == null) {
                     failedGettingAppIconErrorsLiveData.inc()
                     if (isSystemApp) systemAppsErrorsCountLiveData.inc()
-                     Log.e("AppLog", "icon fetching: can\'t get app icon for \"$packageName\" in: \"$baseApkPath\"")
+                    Log.e("AppLog", "icon fetching: can\'t get app icon for \"$packageName\" in: \"$baseApkPath\"")
                     // Log all entries in all APKs to see if the requested path exists
                     for (apkPath in allApkFilePaths) {
                         try {
@@ -144,9 +150,9 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                                 for (p in iconPaths) {
                                     // if (zip.getEntry(p) != null) Log.d("AppLog", "icon fetching: found $p in $apkPath")
                                     // else {
-                                        // Try without leading res/ if it's there
-                                        // val p2 = if (p.startsWith("res/")) p.substring(4) else p
-                                        // if (zip.getEntry(p2) != null) Log.d("AppLog", "icon fetching: found $p2 (alt) in $apkPath")
+                                    // Try without leading res/ if it's there
+                                    // val p2 = if (p.startsWith("res/")) p.substring(4) else p
+                                    // if (zip.getEntry(p2) != null) Log.d("AppLog", "icon fetching: found $p2 (alt) in $apkPath")
                                     // }
                                 }
                             }

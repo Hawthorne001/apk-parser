@@ -45,13 +45,15 @@ class ApkInfo(
                 if (masterResourceTable != null) {
                     allLocales.addAll(masterResourceTable.getLocales())
                     masterResourceTable
-                } else if (resourcesBytes == null)
-                    ResourceTable(null)
-                else {
-                    val resourceTableParser = ResourceTableParser(ByteBuffer.wrap(resourcesBytes))
-                    resourceTableParser.parse()
-                    allLocales.addAll(resourceTableParser.locales)
-                    val table = resourceTableParser.resourceTable
+                } else {
+                    val table = if (resourcesBytes == null) {
+                        ResourceTable(null)
+                    } else {
+                        val resourceTableParser = ResourceTableParser(ByteBuffer.wrap(resourcesBytes))
+                        resourceTableParser.parse()
+                        allLocales.addAll(resourceTableParser.locales)
+                        resourceTableParser.resourceTable
+                    }
                     // Merge extra resource tables if requested
                     if (requestParseResources) {
                         for (extraFilter in extraZipFilters) {
@@ -63,12 +65,12 @@ class ApkInfo(
                                 try {
                                     val extraParser = ResourceTableParser(ByteBuffer.wrap(extraBytes))
                                     extraParser.parse()
-                                    
+
                                     // Split Filtering: Only merge if the split is relevant to the user's locales
                                     val isRelevant = extraParser.locales.isEmpty() || extraParser.locales.any { sl ->
                                         locales.any { ul -> Locales.isParent(ul, sl) }
                                     }
-                                    
+
                                     if (isRelevant) {
                                         allLocales.addAll(extraParser.locales)
                                         table.merge(extraParser.resourceTable)

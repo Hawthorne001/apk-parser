@@ -96,8 +96,13 @@ public class ApkMetaTranslator implements XmlStreamer {
                     this.apkMetaBuilder.setLabel(label);
                 } else {
                     final String packageName = this.apkMetaBuilder.getPackageName();
-                    final String className = attributes.getString("name");
+                    String className = attributes.getString("name");
                     if (className != null) {
+                        if (className.startsWith(".")) {
+                            className = packageName + className;
+                        } else if (!className.contains(".")) {
+                            className = packageName + "." + className;
+                        }
                         this.apkMetaBuilder.setLabel(className);
                     } else {
                         this.apkMetaBuilder.setLabel(packageName);

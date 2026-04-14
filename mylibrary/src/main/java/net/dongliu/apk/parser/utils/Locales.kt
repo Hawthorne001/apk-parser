@@ -127,7 +127,7 @@ object Locales {
     @JvmStatic
     fun isParent(target: Locale, candidate: Locale): Boolean {
         if (candidate.language.isEmpty()) return true
-        if (candidate.language != target.language) return false
+        if (normalizeLanguage(candidate.language) != normalizeLanguage(target.language)) return false
         return candidate.country.isEmpty() || candidate.country == target.country
     }
 

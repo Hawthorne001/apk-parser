@@ -186,28 +186,17 @@ public abstract class ResourceValue {
 
             java.util.List<Locale> localeList = (locales == null || locales.isEmpty()) ?
                 java.util.Collections.singletonList(Locale.getDefault()) : locales;
-            java.util.Set<Locale> appLocales = resourceTable.getLocales();
-            
-            // Replicate Android's 'Best Configuration' selection:
-            // 1. Find the best matching locale available in the APK for this user.
-            Locale winningLocale = Locales.getBestMatch(localeList, appLocales);
 
             for (final ResourceTable.Resource resource : resources) {
                 final Type type = resource.type;
                 final ResourceEntry resourceEntry = resource.resourceEntry;
-
-                // 2. Only allow resources from the Winning Locale or its parents (e.g. en_AU -> en -> Default).
-                // This ensures we pick Default if the 'Better' regional match doesn't have the resource.
-                if (!Locales.isParent(winningLocale, type.locale)) {
-                    continue;
-                }
 
                 final long matchScore = Locales.matchScore(localeList, type.locale);
                 final int densityLevel = ReferenceResourceValue.densityLevel(type.density);
                 
                 // Diagnostic: log details for ID that had mismatch in previous runs
                 if (matchScore > 0 && (resourceId == 0x7f100020 || resourceId == 0x7f130023 || resourceId == 0x7f140046 || resourceId == 0x7f130027 || resourceId == 0x7f10013d || resourceId == 0x7f0b0001 || resourceId == 0x7f07001c || resourceId == 0x7f0d0014)) {
-                    android.util.Log.d("AppLog", "label fetching: Candidate 0x" + Long.toHexString(resourceId) + ": config=[" + type.locale + "] score=" + matchScore + " winner=[" + winningLocale + "] appLocalesSize=" + appLocales.size() + " value=[" + resourceEntry.toStringValue(resourceTable, (Locale)null) + "]");
+                    android.util.Log.d("AppLog", "label fetching: Candidate 0x" + Long.toHexString(resourceId) + ": config=[" + type.locale + "] score=" + matchScore + " value=[" + resourceEntry.toStringValue(resourceTable, (Locale)null) + "]");
                 }
 
                 if (matchScore > currentMatchScore) {
