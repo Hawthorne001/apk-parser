@@ -76,8 +76,10 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-//                    it.add("com.unicell.pangoandroid")
-//                    it.add("com.google.android.apps.nexuslauncher")
+                    it.add("com.google.pixel.livewallpaper")
+                    it.add("com.google.android.apps.ai.icons")
+                    it.add("com.google.ambient.streaming")
+                    it.add("com.google.android.apps.nexuslauncher")
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
