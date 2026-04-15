@@ -76,8 +76,8 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-                    it.add("com.unicell.pangoandroid")
-                    it.add("com.google.android.apps.nexuslauncher")
+//                    it.add("com.unicell.pangoandroid")
+//                    it.add("com.google.android.apps.nexuslauncher")
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
@@ -200,25 +200,13 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             //compare app label using library vs framework
             val labelOfLibrary = apkMeta.label ?: apkMeta.packageName
             if (VALIDATE_RESOURCES) {
-                val potentialLabels = HashSet<CharSequence>()
-//                packageManager.getPackageArchiveInfo(baseApkPath, 0)?.applicationInfo?.let { appInfo ->
-//                    if (appInfo.nonLocalizedLabel != null)
-//                        potentialLabels.add(appInfo.nonLocalizedLabel)
-//                    potentialLabels.add(appInfo.loadLabel(packageManager))
-//                }
-                packageInfo.applicationInfo!!.let { appInfo ->
-//                    if (appInfo.nonLocalizedLabel != null)
-//                        potentialLabels.add(appInfo.nonLocalizedLabel)
-                    potentialLabels.add(appInfo.loadLabel(packageManager))
-                }
-                val potentialLabelsStrings = potentialLabels.map { it.toString() }.toSet()
-                if (!potentialLabelsStrings.contains(labelOfLibrary.toString())) {
+                val expectedAppLabel= packageInfo.applicationInfo!!.loadLabel(packageManager)
+
+                if (expectedAppLabel!=labelOfLibrary.toString()) {
                     wrongLabelErrorsLiveData.inc()
                     if (isSystemApp) systemAppsErrorsCountLiveData.inc()
-                    val libraryHex = labelOfLibrary?.toString()?.toByteArray(Charsets.UTF_8)?.joinToString("") { "%02x".format(it) }
-                    val frameworkHex = potentialLabels.map { label -> label.toString().toByteArray(Charsets.UTF_8).joinToString("") { "%02x".format(it) } }
                     val allLibraryLabels = apkMetaTranslator.getAllLabels()
-                    Log.e("AppLog", "label fetching: mismatch for \"${packageName}\": correct=${potentialLabels.joinToString(prefix = "\"", postfix = "\"", separator = "\\")} ($frameworkHex) vs found=\"$labelOfLibrary\" ($libraryHex)")
+                    Log.e("AppLog", "label fetching: mismatch for \"${packageName}\": correct=\"$expectedAppLabel\" vs found=\"$labelOfLibrary\"")
                     Log.e("AppLog", "label fetching: All library translations for \"$packageName\": $allLibraryLabels")
                     Log.e("AppLog", "label fetching: System locale list: $localeList. APK all locales: ${currentApkInfo.allLocales}")
                     packageInfo.applicationInfo?.let { appInfo ->
