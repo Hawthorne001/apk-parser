@@ -201,14 +201,14 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             val labelOfLibrary = apkMeta.label ?: apkMeta.packageName
             if (VALIDATE_RESOURCES) {
                 val potentialLabels = HashSet<CharSequence>()
-                packageManager.getPackageArchiveInfo(baseApkPath, 0)?.applicationInfo?.let { appInfo ->
-                    if (appInfo.nonLocalizedLabel != null)
-                        potentialLabels.add(appInfo.nonLocalizedLabel)
-                    potentialLabels.add(appInfo.loadLabel(packageManager))
-                }
+//                packageManager.getPackageArchiveInfo(baseApkPath, 0)?.applicationInfo?.let { appInfo ->
+//                    if (appInfo.nonLocalizedLabel != null)
+//                        potentialLabels.add(appInfo.nonLocalizedLabel)
+//                    potentialLabels.add(appInfo.loadLabel(packageManager))
+//                }
                 packageInfo.applicationInfo!!.let { appInfo ->
-                    if (appInfo.nonLocalizedLabel != null)
-                        potentialLabels.add(appInfo.nonLocalizedLabel)
+//                    if (appInfo.nonLocalizedLabel != null)
+//                        potentialLabels.add(appInfo.nonLocalizedLabel)
                     potentialLabels.add(appInfo.loadLabel(packageManager))
                 }
                 val potentialLabelsStrings = potentialLabels.map { it.toString() }.toSet()
