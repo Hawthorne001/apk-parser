@@ -76,10 +76,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-                    it.add("com.google.pixel.livewallpaper")
-                    it.add("com.google.android.apps.ai.icons")
-                    it.add("com.google.ambient.streaming")
-                    it.add("com.google.android.apps.nexuslauncher")
+//                    it.add("com.google.android.apps.nexuslauncher")
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
@@ -208,7 +205,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                     wrongLabelErrorsLiveData.inc()
                     if (isSystemApp) systemAppsErrorsCountLiveData.inc()
                     val allLibraryLabels = apkMetaTranslator.getAllLabels()
-                    Log.e("AppLog", "label fetching: mismatch for \"${packageName}\": correct=\"$expectedAppLabel\" vs found=\"$labelOfLibrary\"")
+                    Log.e("AppLog", "label fetching: mismatch for \"${packageName}\": correct=\"$expectedAppLabel\" vs found=\"$labelOfLibrary\" apks:${allApkFilePaths.joinToString()}")
                     Log.e("AppLog", "label fetching: All library translations for \"$packageName\": $allLibraryLabels")
                     Log.e("AppLog", "label fetching: System locale list: $localeList. APK all locales: ${currentApkInfo.allLocales}")
                     packageInfo.applicationInfo?.let { appInfo ->

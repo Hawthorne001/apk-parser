@@ -32,6 +32,8 @@ public abstract class ResourceValue {
     public abstract String toStringValue(ResourceTable resourceTable, Locale locale);
 
     public String toStringValue(ResourceTable resourceTable, java.util.List<Locale> locales) {
+        // We MUST override this in ReferenceResourceValue to actually use the list.
+        // For other types, they don't care about locales, so using the first one is fine.
         return toStringValue(resourceTable, (locales != null && !locales.isEmpty()) ? locales.get(0) : Locale.getDefault());
     }
 
@@ -181,7 +183,7 @@ public abstract class ResourceValue {
 
             // Resource resolution across LocaleList
             ResourceEntry selected = null;
-            long currentMatchScore = -1;
+            long currentMatchScore = 0; // Initialize to 0 to only pick valid matches
             int currentDensityLevel = -1;
 
             java.util.List<Locale> localeList = (locales == null || locales.isEmpty()) ?
@@ -206,6 +208,20 @@ public abstract class ResourceValue {
                 } else if (matchScore == currentMatchScore && densityLevel > currentDensityLevel) {
                     selected = resourceEntry;
                     currentDensityLevel = densityLevel;
+                }
+            }
+
+            if (selected == null) {
+                // If no user locale matched, check if there is a Default configuration
+                // or if we should just pick the first available resource as absolute fallback.
+                for (final ResourceTable.Resource resource : resources) {
+                    if (resource.type.locale.getLanguage().isEmpty()) {
+                        selected = resource.resourceEntry;
+                        break;
+                    }
+                }
+                if (selected == null && !resources.isEmpty()) {
+                    selected = resources.get(0).resourceEntry;
                 }
             }
 

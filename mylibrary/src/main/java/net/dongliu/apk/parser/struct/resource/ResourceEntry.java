@@ -74,7 +74,7 @@ public class ResourceEntry {
         if (value != null) {
             return value.toStringValue(resourceTable, locale);
         } else {
-            return "null";
+            return null;
         }
     }
 
@@ -84,7 +84,7 @@ public class ResourceEntry {
         if (value != null) {
             return value.toStringValue(resourceTable, locales);
         } else {
-            return "null";
+            return null;
         }
     }
 

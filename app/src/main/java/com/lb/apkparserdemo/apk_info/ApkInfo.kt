@@ -3,7 +3,6 @@ package com.lb.apkparserdemo.apk_info
 import net.dongliu.apk.parser.parser.*
 import net.dongliu.apk.parser.struct.AndroidConstants
 import net.dongliu.apk.parser.struct.resource.ResourceTable
-import net.dongliu.apk.parser.utils.Locales
 import java.nio.ByteBuffer
 import java.util.Locale
 
@@ -66,10 +65,8 @@ class ApkInfo(
                                     val extraParser = ResourceTableParser(ByteBuffer.wrap(extraBytes))
                                     extraParser.parse()
 
-                                    // Split Filtering: Only merge if the split is relevant to the user's locales
-                                    val isRelevant = extraParser.locales.isEmpty() || extraParser.locales.any { sl ->
-                                        locales.any { ul -> Locales.isParent(ul, sl) }
-                                    }
+                                    // Merge all splits to ensure we have all translations for label/icon resolution.
+                                    val isRelevant = true
 
                                     if (isRelevant) {
                                         allLocales.addAll(extraParser.locales)
@@ -86,7 +83,7 @@ class ApkInfo(
             val binaryXmlParser = BinaryXmlParser(
                 ByteBuffer.wrap(manifestBytes), resourceTable,
                 CompositeXmlStreamer(xmlTranslator, apkMetaTranslator),
-                locales.getOrNull(0) ?: Locale.getDefault()
+                locales
             )
             try {
                 binaryXmlParser.parse()
@@ -209,7 +206,7 @@ class ApkInfo(
                         ByteBuffer.wrap(manifestBytes),
                         ResourceTable(null),
                         apkMetaTranslator,
-                        locales.getOrNull(0) ?: Locale.getDefault()
+                        locales
                     )
                     try {
                         binaryXmlParser.parse()

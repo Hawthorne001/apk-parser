@@ -57,18 +57,23 @@ public class BinaryXmlParser {
     @NonNull
     private final ResourceTable resourceTable;
     /**
-     * default locale.
+     * preferred locales.
      */
     @NonNull
-    private final Locale locale;
+    private final java.util.List<Locale> locales;
 
     public BinaryXmlParser(final @NonNull ByteBuffer buffer, final @NonNull ResourceTable resourceTable, final @NonNull XmlStreamer xmlStreamer
-            , final @Nullable Locale locale) {
+            , final @Nullable java.util.List<Locale> locales) {
         this.buffer = buffer.duplicate();
         this.buffer.order(ByteOrder.LITTLE_ENDIAN);
         this.resourceTable = resourceTable;
         this.xmlStreamer = xmlStreamer;
-        this.locale = locale == null ? Locales.any : locale;
+        this.locales = (locales == null || locales.isEmpty()) ? java.util.Collections.singletonList(Locales.any) : locales;
+    }
+
+    public BinaryXmlParser(final @NonNull ByteBuffer buffer, final @NonNull ResourceTable resourceTable, final @NonNull XmlStreamer xmlStreamer
+            , final @Nullable Locale locale) {
+        this(buffer, resourceTable, xmlStreamer, locale == null ? null : java.util.Collections.singletonList(locale));
     }
 
     public void parse() {
@@ -190,7 +195,7 @@ public class BinaryXmlParser {
                 long resId = ((ResourceValue.ReferenceResourceValue) attribute.typedValue).getReferenceResourceId();
                 // android.util.Log.d("AppLog", "icon fetching: attr " + attributeName + " is reference 0x" + Long.toHexString(resId));
             }
-            String value = attribute.toStringValue(this.resourceTable, this.locale);
+            String value = attribute.toStringValue(this.resourceTable, this.locales);
             if (value != null && BinaryXmlParser.intAttributes.contains(attributeName) && Strings.isNumeric(value)) {
                 try {
                     value = this.getFinalValueAsString(attributeName, value);
@@ -238,20 +243,27 @@ public class BinaryXmlParser {
     private Attribute readAttribute() {
         final int namespaceRef = this.buffer.getInt();
         final int nameRef = this.buffer.getInt();
-        String name = this.stringPool.get(nameRef);
-        if (name.isEmpty() && this.resourceMap != null && nameRef < this.resourceMap.length) {
-            // some processed apk file make the string pool value empty, if it is a xmlmap attr.
-            name = this.resourceMap[nameRef];
+        String name = (this.stringPool != null && nameRef >= 0) ? this.stringPool.get(nameRef) : "";
+        if (name == null) name = "";
+
+        // Use resourceMap to resolve attribute names if possible.
+        // This is crucial for APKs with obfuscated or shifted string pools.
+        if (this.resourceMap != null && nameRef >= 0 && nameRef < this.resourceMap.length) {
+            String mapName = this.resourceMap[nameRef];
+            if (mapName != null && !mapName.isEmpty() && !mapName.startsWith("AttrId:0x")) {
+                // If we resolved a known system name from the resource map, trust it over the string pool.
+                name = mapName;
+            }
         }
-        String namespace = namespaceRef > 0 ? this.stringPool.get(namespaceRef) : null;
+
+        String namespace = (this.stringPool != null && namespaceRef >= 0) ? this.stringPool.get(namespaceRef) : null;
         if (namespace == null || namespace.isEmpty() || "http://schemas.android.com/apk/res/android".equals(namespace)) {
-            //TODO parse namespaces better
-            //workaround for a weird case that there is no namespace found: https://github.com/hsiafan/apk-parser/issues/122
-            // Log.d("AppLog", "Got a weird namespace, so setting as empty (namespace isn't supposed to be a URL): " + attribute.getName());
+            // Standardize platform namespace to "android" for easier lookup in Attributes.get().
             namespace = "android";
         }
+
         final int rawValueRef = this.buffer.getInt();
-        final String rawValue = rawValueRef > 0 ? this.stringPool.get(rawValueRef) : null;
+        final String rawValue = (this.stringPool != null && rawValueRef >= 0) ? this.stringPool.get(rawValueRef) : null;
         final ResourceValue resValue = ParseUtils.readResValue(this.buffer, this.stringPool);
         return new Attribute(namespace, name, rawValue, resValue);
     }
@@ -319,8 +331,13 @@ public class BinaryXmlParser {
     }
 
     @NonNull
+    public java.util.List<Locale> getLocales() {
+        return this.locales;
+    }
+
+    @NonNull
     public Locale getLocale() {
-        return this.locale;
+        return this.locales.get(0);
     }
 
 }

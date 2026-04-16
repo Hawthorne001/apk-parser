@@ -14,18 +14,23 @@ object Locales {
 
     /**
      * How much the given locale match the expected locale.
+     * Returns a level of matching:
+     * 4: Exact match (Language + Country)
+     * 3: Language-only match (app has generic language)
+     * 2: Language match, country mismatch
+     * 1: Default configuration (target is empty)
+     * 0: No match
      */
     @JvmStatic
     fun match(locale: Locale?, targetLocale: Locale): Int {
         if (locale == null) {
-            return -1
+            return 0
         }
         val lang1 = normalizeLanguage(locale.language)
         val lang2 = normalizeLanguage(targetLocale.language)
         
         if (lang2.isEmpty()) {
-            if (lang1 == "en") return 2 // For English, Default is a language match
-            return 1 // Default matches everything else at level 1
+            return 1 // Default configuration matches everything at level 1
         }
         
         if (lang1 != lang2) {
@@ -35,17 +40,17 @@ object Locales {
         val country1 = locale.country
         val country2 = targetLocale.country
 
-        if (country1 == country2) {
+        // Pseudolocale check: ignore them as they shouldn't match real user locales
+        if (country2 == "XA" || country2 == "XB") {
+            return 0
+        }
+
+        if (country1 == country2 && country1.isNotEmpty()) {
             return 4 // Exact match
         }
         
         if (country2.isEmpty()) {
-            return 3 // Language match
-        }
-
-        // Pseudolocale check
-        if (country2 == "XA" || country2 == "XB") {
-            return 0
+            return 3 // Language-only match (app has generic language)
         }
 
         return 2 // Language match, country mismatch
@@ -57,43 +62,37 @@ object Locales {
      */
     @JvmStatic
     fun matchScore(locales: List<Locale>, targetLocale: Locale): Long {
-        if (locales.isEmpty()) return match(null, targetLocale).toLong()
+        if (locales.isEmpty()) {
+            return if (targetLocale.language.isEmpty()) 1L else 0L
+        }
         
         for (i in 0 until locales.size) {
             val level = match(locales.get(i), targetLocale)
             if (level >= 1) {
-                // Primary weight: Position in the user's preference list.
-                var score = (locales.size - i).toLong() * 10000 + level * 1000
+                // Primary weight: Position in user's preference list.
+                // Secondary weight: Specificity of match (exact > language-only > country-mismatch > default).
+                var score = (locales.size - i).toLong() * 1000000L + level * 10000L
                 
+                // Tertiary weight: Country tie-breakers for common languages.
                 val country1 = locales.get(i).country
                 val country2 = targetLocale.country
                 if (country2.length == 2) {
-                    // Tie-breaker within the same locale and level.
-                    if (country1 == country2) score += 995
+                    if (country1 == country2) score += 9000
                     else if (isInternationalEnglish(country1) && isInternationalEnglish(country2)) {
-                        // International English tie-breaker: prefer GB as standard.
-                        if (country2 == "GB") score += 990
-                        else if (country2 == "US") score += 985
-                        else {
-                            // Alphabetical
-                            score += (90 - country2[0].code) * 2 + (90 - country2[1].code) / 10
-                        }
-                    } else if (country2 == "GB") score += 800
-                    else if (country2 == "US") score += 750
-                    else {
-                        score += (90 - country2[0].code) * 5 + (90 - country2[1].code)
-                    }
+                        if (country2 == "GB") score += 8500
+                        else if (country2 == "US") score += 8000
+                        else score += (90 - country2[0].code).toLong() * 20 + (90 - country2[1].code).toLong()
+                    } else if (country2 == "GB") score += 5000
+                    else if (country2 == "US") score += 4000
+                    else score += (90 - country2[0].code).toLong() * 10 + (90 - country2[1].code).toLong()
                 } else if (targetLocale.language.isNotEmpty()) {
-                    score += 980
-                } else if (normalizeLanguage(locales.get(i).language) == "en") {
-                    // For English users, prefer Default over "cousins" that are not international English matches
-                    score += 970
+                    score += 7000
                 }
                 return score
             }
         }
         
-        return 0
+        return 0L
     }
 
     private fun isInternationalEnglish(country: String): Boolean {
@@ -131,7 +130,8 @@ object Locales {
         return candidate.country.isEmpty() || candidate.country == target.country
     }
 
-    private fun normalizeLanguage(language: String): String {
+    @JvmStatic
+    fun normalizeLanguage(language: String): String {
         return when (language) {
             "iw" -> "he"
             "in" -> "id"
