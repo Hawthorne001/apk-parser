@@ -59,16 +59,17 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
 
     @WorkerThread
     private fun performTests() {
-        val localeList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            val list = applicationContext.resources.configuration.locales
-            val result = mutableListOf<Locale>()
-            for (i in 0 until list.size()) {
-                result.add(list.get(i))
-            }
-            result
-        } else {
-            listOf(Locale.getDefault())
-        }
+        val localeList =
+//                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+//                    val list = applicationContext.resources.configuration.locales
+//                    val result = mutableListOf<Locale>()
+//                    for (i in 0 until list.size()) {
+//                        result.add(list.get(i))
+//                    }
+//                    result
+//                } else {
+                listOf(Locale.getDefault())
+//                }
         val context = applicationContext
         val appIconSize = AppInfoUtil.getAppIconSize(context)
         val packageManager = context.packageManager
@@ -76,7 +77,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-//                    it.add("com.google.android.apps.nexuslauncher")
+                    it.add("com.google.android.apps.nexuslauncher")
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
@@ -199,9 +200,9 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             //compare app label using library vs framework
             val labelOfLibrary = apkMeta.label ?: apkMeta.packageName
             if (VALIDATE_RESOURCES) {
-                val expectedAppLabel= packageInfo.applicationInfo!!.loadLabel(packageManager)
+                val expectedAppLabel = packageInfo.applicationInfo!!.loadLabel(packageManager)
 
-                if (expectedAppLabel!=labelOfLibrary.toString()) {
+                if (expectedAppLabel != labelOfLibrary.toString()) {
                     wrongLabelErrorsLiveData.inc()
                     if (isSystemApp) systemAppsErrorsCountLiveData.inc()
                     val allLibraryLabels = apkMetaTranslator.getAllLabels()

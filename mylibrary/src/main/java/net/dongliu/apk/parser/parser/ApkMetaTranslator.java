@@ -261,12 +261,12 @@ public class ApkMetaTranslator implements XmlStreamer {
 
     private List<IconPath> extractIconPaths(Attribute iconAttr, String attrName) {
         final ResourceValue resourceValue = iconAttr.typedValue;
-        if (resourceValue != null) {
-            android.util.Log.d("AppLog", "icon fetching: extracting " + attrName + ", typedValue type: " + resourceValue.getClass().getSimpleName());
-        }
+//        if (resourceValue != null) {
+//            android.util.Log.d("AppLog", "icon fetching: extracting " + attrName + ", typedValue type: " + resourceValue.getClass().getSimpleName());
+//        }
         if (resourceValue instanceof ResourceValue.ReferenceResourceValue) {
             long resId = ((net.dongliu.apk.parser.struct.ResourceValue.ReferenceResourceValue) resourceValue).getReferenceResourceId();
-            android.util.Log.d("AppLog", "icon fetching: extracting " + attrName + " from reference ID 0x" + Long.toHexString(resId));
+//            android.util.Log.d("AppLog", "icon fetching: extracting " + attrName + " from reference ID 0x" + Long.toHexString(resId));
             return extractIconPathsById(resId, attrName, new java.util.HashSet<Long>());
         } else {
             final String value = iconAttr.value;
@@ -274,9 +274,10 @@ public class ApkMetaTranslator implements XmlStreamer {
                 updateApkMetaIcon(value, attrName);
                 final IconPath iconPath = new IconPath(value, Densities.DEFAULT);
                 return Collections.singletonList(iconPath);
-            } else {
-                android.util.Log.d("AppLog", "icon fetching: " + attrName + " attribute exists but has no value");
             }
+//            else {
+//                android.util.Log.d("AppLog", "icon fetching: " + attrName + " attribute exists but has no value");
+//            }
         }
         return Collections.emptyList();
     }
@@ -287,7 +288,7 @@ public class ApkMetaTranslator implements XmlStreamer {
 
         final List<ResourceTable.Resource> resources = this.resourceTable.getResourcesById(resourceId);
         if (resources.isEmpty()) {
-            android.util.Log.d("AppLog", "icon fetching: no resources found for ID 0x" + Long.toHexString(resourceId));
+//            android.util.Log.d("AppLog", "icon fetching: no resources found for ID 0x" + Long.toHexString(resourceId));
             // Check if this might be a system resource that wasn't in our table
             if ((resourceId >> 24) == 0x01) {
                 String path = "resourceId:0x" + Long.toHexString(resourceId);
@@ -321,7 +322,7 @@ public class ApkMetaTranslator implements XmlStreamer {
     }
 
     private void updateApkMetaIcon(String path, String attrName) {
-        android.util.Log.d("AppLog", "icon fetching: discovered " + attrName + " path: " + path);
+//        android.util.Log.d("AppLog", "icon fetching: discovered " + attrName + " path: " + path);
         if ("icon".equals(attrName)) {
             this.apkMetaBuilder.setIcon(path);
         } else if ("roundIcon".equals(attrName)) {
