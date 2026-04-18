@@ -73,7 +73,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         val context = applicationContext
         val appIconSize = AppInfoUtil.getAppIconSize(context)
         val packageManager = context.packageManager
-        Log.d("AppLog", "getting all package infos:")
+        Log.d("AppLog", "getting all package infos: locale:$mainLocale")
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
