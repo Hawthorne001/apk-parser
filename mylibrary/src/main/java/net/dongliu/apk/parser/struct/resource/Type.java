@@ -71,8 +71,6 @@ public class Type {
 
     private ResourceEntry readResourceEntry() {
         long beginPos = buffer.position();
-//        ResourceEntry resourceEntry = new ResourceEntry();
-        // size is always 8(simple), or 16(complex)
         final int size = Buffers.readUShort(buffer);
         final int flags = Buffers.readUShort(buffer);
         long keyRef = buffer.getInt();
@@ -91,11 +89,16 @@ public class Type {
             for (int i = 0; i < count; i++) {
                 resourceTableMaps[i] = readResourceTableMap();
             }
-//            ResourceEntry resourceEntry = new ResourceEntry(size,flags,key,resourceTableMaps);
-            ResourceMapEntry resourceMapEntry = new ResourceMapEntry(size,flags,key,parent,count,resourceTableMaps);
-            return resourceMapEntry;
+            return new ResourceMapEntry(size,flags,key,parent,count,resourceTableMaps);
         } else if ((flags & ResourceEntry.FLAG_COMPACT) != 0) {
-            final ResourceValue value = ResourceValue.string((int) keyRef, stringPool);
+            // Compact entries can be strings or references.
+            // If it looks like a resource ID, treat it as a reference.
+            ResourceValue value;
+            if (((keyRef >> 24) & 0xFF) == 0x7f || ((keyRef >> 24) & 0xFF) == 0x01) {
+                value = ResourceValue.reference((int) keyRef);
+            } else {
+                value = ResourceValue.string((int) keyRef, stringPool);
+            }
             return new ResourceEntry(size,flags,null,value);
         } else {
             String key = keyStringPool.get((int) keyRef);
@@ -109,14 +112,6 @@ public class Type {
         final ResourceTableMap resourceTableMap = new ResourceTableMap();
         resourceTableMap.setNameRef(Buffers.readUInt(this.buffer));
         resourceTableMap.setResValue(ParseUtils.readResValue(this.buffer, this.stringPool));
-        //noinspection StatementWithEmptyBody
-        if ((resourceTableMap.getNameRef() & 0x02000000) != 0) {
-            //read arrays
-        } else //noinspection StatementWithEmptyBody
-            if ((resourceTableMap.getNameRef() & 0x01000000) != 0) {
-                // read attrs
-            } else {
-            }
         return resourceTableMap;
     }
 

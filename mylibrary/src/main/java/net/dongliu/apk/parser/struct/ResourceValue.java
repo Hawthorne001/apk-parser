@@ -6,7 +6,6 @@ import androidx.annotation.Nullable;
 import net.dongliu.apk.parser.struct.resource.Densities;
 import net.dongliu.apk.parser.struct.resource.ResourceEntry;
 import net.dongliu.apk.parser.struct.resource.ResourceTable;
-import net.dongliu.apk.parser.struct.resource.Type;
 import net.dongliu.apk.parser.struct.xml.Attribute;
 import net.dongliu.apk.parser.utils.Locales;
 
@@ -29,13 +28,7 @@ public abstract class ResourceValue {
      * get value as string.
      */
     @Nullable
-    public abstract String toStringValue(ResourceTable resourceTable, Locale locale);
-
-    public String toStringValue(ResourceTable resourceTable, java.util.List<Locale> locales) {
-        // We MUST override this in ReferenceResourceValue to actually use the list.
-        // For other types, they don't care about locales, so using the first one is fine.
-        return toStringValue(resourceTable, (locales != null && !locales.isEmpty()) ? locales.get(0) : Locale.getDefault());
-    }
+    public abstract String toStringValue(ResourceTable resourceTable, @Nullable Locale locale);
 
     @NonNull
     public static ResourceValue decimal(final int value) {
@@ -104,7 +97,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
             return String.valueOf(this.value);
         }
     }
@@ -116,7 +109,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
             return "0x" + Integer.toHexString(this.value);
         }
     }
@@ -128,7 +121,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
             return String.valueOf(this.value != 0);
         }
     }
@@ -143,9 +136,13 @@ public abstract class ResourceValue {
 
         @Nullable
         @Override
-        public String toStringValue(final ResourceTable resourceTable, final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
             if (this.value >= 0) {
-                return this.stringPool.get(this.value);
+                String result = this.stringPool.get(this.value);
+                if (result == null) {
+                     android.util.Log.d("AppLog", "label fetching: StringPool returned null for index 0x" + Integer.toHexString(this.value) + " (pool length: " + stringPool.length() + ")");
+                }
+                return result;
             } else {
                 return null;
             }
@@ -154,7 +151,8 @@ public abstract class ResourceValue {
         @NonNull
         @Override
         public String toString() {
-            return this.value + ":" + this.stringPool.get(this.value);
+            String val = this.stringPool.get(this.value);
+            return this.value + ":" + val;
         }
     }
 
@@ -169,76 +167,59 @@ public abstract class ResourceValue {
 
         @Override
         @Nullable
-        public String toStringValue(final @Nullable ResourceTable resourceTable, final java.util.List<Locale> locales) {
+        public String toStringValue(final @Nullable ResourceTable resourceTable, @Nullable final Locale locale) {
             final long resourceId = this.getReferenceResourceId();
             // android system styles.
             if (resourceId > AndroidConstants.SYS_STYLE_ID_START && resourceId < AndroidConstants.SYS_STYLE_ID_END) {
-                return "@android:style/" + ResourceTable.sysStyle.get((int) resourceId);
+                String style = ResourceTable.sysStyle.get((int) resourceId);
+                if (style != null) {
+                    return "@android:style/" + style;
+                }
             }
             final String raw = "resourceId:0x" + Long.toHexString(resourceId);
             if (resourceTable == null) {
                 return raw;
             }
             final List<ResourceTable.Resource> resources = resourceTable.getResourcesById(resourceId);
+            if (resources.isEmpty()) {
+                // If it's a platform resource that wasn't in our table, we can't resolve it.
+                if ((resourceId >> 24) == 0x01) {
+                    return raw;
+                }
+                android.util.Log.d("AppLog", "label fetching: getResourcesById(0x" + Long.toHexString(resourceId) + ") returned NOTHING");
+                return null;
+            }
 
-            // Resource resolution across LocaleList
             ResourceEntry selected = null;
-            long currentMatchScore = 0; // Initialize to 0 to only pick valid matches
+            int currentMaxScore = -1;
             int currentDensityLevel = -1;
 
-            java.util.List<Locale> localeList = (locales == null || locales.isEmpty()) ?
-                java.util.Collections.singletonList(Locale.getDefault()) : locales;
-
+            // Search for the best locale match
             for (final ResourceTable.Resource resource : resources) {
-                final Type type = resource.type;
-                final ResourceEntry resourceEntry = resource.resourceEntry;
-
-                final long matchScore = Locales.matchScore(localeList, type.locale);
-                final int densityLevel = ReferenceResourceValue.densityLevel(type.density);
-                
-                // Diagnostic: log details for ID that had mismatch in previous runs
-                if (matchScore > 0 && (resourceId == 0x7f100020 || resourceId == 0x7f130023 || resourceId == 0x7f140046 || resourceId == 0x7f130027 || resourceId == 0x7f10013d || resourceId == 0x7f0b0001 || resourceId == 0x7f07001c || resourceId == 0x7f0d0014)) {
-                    android.util.Log.d("AppLog", "label fetching: Candidate 0x" + Long.toHexString(resourceId) + ": config=[" + type.locale + "] score=" + matchScore + " value=[" + resourceEntry.toStringValue(resourceTable, (Locale)null) + "]");
-                }
-
-                if (matchScore > currentMatchScore) {
-                    selected = resourceEntry;
-                    currentMatchScore = matchScore;
+                final int matchScore = Locales.match(locale, resource.type.locale);
+                final int densityLevel = ReferenceResourceValue.densityLevel(resource.type.density);
+                if (matchScore > currentMaxScore) {
+                    selected = resource.resourceEntry;
+                    currentMaxScore = matchScore;
                     currentDensityLevel = densityLevel;
-                } else if (matchScore == currentMatchScore && densityLevel > currentDensityLevel) {
-                    selected = resourceEntry;
+                } else if (matchScore > 0 && matchScore == currentMaxScore && densityLevel > currentDensityLevel) {
+                    selected = resource.resourceEntry;
                     currentDensityLevel = densityLevel;
                 }
             }
 
             if (selected == null) {
-                // If no user locale matched, check if there is a Default configuration
-                // or if we should just pick the first available resource as absolute fallback.
-                for (final ResourceTable.Resource resource : resources) {
-                    if (resource.type.locale.getLanguage().isEmpty()) {
-                        selected = resource.resourceEntry;
-                        break;
-                    }
-                }
-                if (selected == null && !resources.isEmpty()) {
-                    selected = resources.get(0).resourceEntry;
-                }
+                // Absolute fallback - pick the first available
+                selected = resources.get(0).resourceEntry;
             }
 
-            final String result;
-            if (selected == null) {
-                result = raw;
-            } else {
-                // To get the actual string value, we use the locales list to resolve any further references
-                result = selected.toStringValue(resourceTable, locales);
+            // Recurse to get the value of the selected entry
+            if (selected != null) {
+                String result = selected.toStringValue(resourceTable, locale);
+                android.util.Log.d("AppLog", "label fetching: ID 0x" + Long.toHexString(resourceId) + " recursed to result: " + result);
+                return result;
             }
-            return result;
-        }
-
-        @Override
-        @Nullable
-        public String toStringValue(final @Nullable ResourceTable resourceTable, final Locale locale) {
-            return toStringValue(resourceTable, java.util.Collections.singletonList(locale));
+            return null;
         }
 
         public long getReferenceResourceId() {
@@ -261,7 +242,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
             return "";
         }
     }
@@ -275,7 +256,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
             final StringBuilder sb = new StringBuilder();
             sb.append("#");
             for (int i = this.len - 1; i >= 0; i--) {
@@ -294,7 +275,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
             final short unit = (short) (this.value & 0xff);
             final String unitStr;
             switch (unit) {
@@ -330,7 +311,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
             // The low-order 4 bits of the data value specify the type of the fraction
             final short type = (short) (this.value & 0xf);
             final String pstr;
@@ -358,7 +339,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
             return "{" + this.dataType + ":" + (this.value & 0xFFFFFFFFL) + "}";
         }
     }
@@ -369,7 +350,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
             return "?" + Attribute.getString(this.value & 0xFFFFFFFFL);
         }
     }
@@ -380,7 +361,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
             return String.valueOf(Float.intBitsToFloat(this.value));
         }
     }

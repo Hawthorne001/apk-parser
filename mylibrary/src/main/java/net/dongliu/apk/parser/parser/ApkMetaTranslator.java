@@ -40,17 +40,12 @@ public class ApkMetaTranslator implements XmlStreamer {
 
     private final ResourceTable resourceTable;
     @Nullable
-    private final java.util.List<Locale> locales;
+    private final Locale locale;
     private java.util.Set<Locale> allLocales = java.util.Collections.emptySet();
 
     public ApkMetaTranslator(final @NonNull ResourceTable resourceTable, @Nullable final Locale locale) {
         this.resourceTable = resourceTable;
-        this.locales = locale != null ? java.util.Collections.singletonList(locale) : null;
-    }
-
-    public ApkMetaTranslator(final @NonNull ResourceTable resourceTable, @Nullable final java.util.List<Locale> locales) {
-        this.resourceTable = resourceTable;
-        this.locales = locales;
+        this.locale = locale;
     }
 
     public void setAllLocales(java.util.Set<Locale> allLocales) {
@@ -61,14 +56,8 @@ public class ApkMetaTranslator implements XmlStreamer {
     public void onStartTag(final @NonNull XmlNodeStartTag xmlNodeStartTag) {
         final Attributes attributes = xmlNodeStartTag.attributes;
         final String xmlNodeStartTagName = xmlNodeStartTag.name;
-        // android.util.Log.d("AppLog", "icon fetching: manifest tag encountered: <" + xmlNodeStartTagName + ">");
         switch (xmlNodeStartTagName) {
             case "application": {
-                for (Attribute attr : attributes.attributes) {
-                    if (attr == null) continue;
-                    String typeStr = attr.typedValue != null ? attr.typedValue.getClass().getSimpleName() : "null";
-                    android.util.Log.d("AppLog", "label fetching: application attr: " + attr.name + "=" + attr.value + " (type: " + typeStr + ") split=" + this.apkMetaBuilder.split + " configForSplit=" + this.apkMetaBuilder.configForSplit);
-                }
                 this.apkMetaBuilder.setDebuggable(attributes.getBoolean("debuggable", false));
                 if (this.apkMetaBuilder.split == null)
                     this.apkMetaBuilder.setSplit(attributes.getString("split"));
@@ -82,30 +71,46 @@ public class ApkMetaTranslator implements XmlStreamer {
                     this.apkMetaBuilder.setIsolatedSplits(attributes.getBoolean("isolatedSplits", false));
 
                 Attribute labelAttr = attributes.get("label");
-                String label;
-                if (labelAttr != null && labelAttr.typedValue instanceof net.dongliu.apk.parser.struct.ResourceValue.ReferenceResourceValue) {
-                    this.labelResId = ((net.dongliu.apk.parser.struct.ResourceValue.ReferenceResourceValue) labelAttr.typedValue).getReferenceResourceId();
-                    label = labelAttr.toStringValue(this.resourceTable, this.locales != null ? this.locales : java.util.Collections.singletonList(java.util.Locale.getDefault()));
-                    android.util.Log.d("AppLog", "label fetching: found label reference ID 0x" + Long.toHexString(labelResId) + ", resolved to: " + label + " (locales: " + this.locales + ")");
-                } else {
-                    label = attributes.getString("label");
-                    android.util.Log.d("AppLog", "label fetching: found label string literal from attributes: " + label + " (locales: " + this.locales + ")");
+                String label = null;
+                if (labelAttr != null) {
+                    if (labelAttr.typedValue instanceof net.dongliu.apk.parser.struct.ResourceValue.ReferenceResourceValue) {
+                        this.labelResId = ((net.dongliu.apk.parser.struct.ResourceValue.ReferenceResourceValue) labelAttr.typedValue).getReferenceResourceId();
+                    }
+                    
+                    // Step 1: Try matched locale
+                    label = labelAttr.toStringValue(this.resourceTable, this.locale);
+                    android.util.Log.d("AppLog", "label fetching: Step 1 (matched locale " + this.locale + ") for ID 0x" + Long.toHexString(this.labelResId) + " returned: " + label);
+                    
+                    if (label == null || label.startsWith("resourceId:0x")) {
+                         // Step 2: Try default APK locale
+                         label = labelAttr.toStringValue(this.resourceTable, (Locale) null);
+                         android.util.Log.d("AppLog", "label fetching: Step 2 (default locale) for ID 0x" + Long.toHexString(this.labelResId) + " returned: " + label);
+                    }
+                    
+                    if (label != null && label.startsWith("resourceId:0x")) {
+                        // Resolution failed or just returned ID
+                        label = null;
+                    }
                 }
 
-                if (label != null) {
+                if (label != null && !label.isEmpty()) {
                     this.apkMetaBuilder.setLabel(label);
                 } else {
+                    // Step 3: Manifest "name" attribute
                     final String packageName = this.apkMetaBuilder.getPackageName();
                     String className = attributes.getString("name");
-                    if (className != null) {
+                    if (className != null && !className.isEmpty()) {
                         if (className.startsWith(".")) {
                             className = packageName + className;
                         } else if (!className.contains(".")) {
                             className = packageName + "." + className;
                         }
                         this.apkMetaBuilder.setLabel(className);
+                        android.util.Log.d("AppLog", "label fetching: " + packageName + " fell back to manifest name: " + className);
                     } else {
+                        // Step 4: Package name
                         this.apkMetaBuilder.setLabel(packageName);
+                        android.util.Log.d("AppLog", "label fetching: " + packageName + " fell back to package name");
                     }
                 }
                 final List<IconPath> allIconPaths = new ArrayList<>();
@@ -247,11 +252,26 @@ public class ApkMetaTranslator implements XmlStreamer {
         java.util.Map<Locale, String> map = new java.util.HashMap<>();
         for (ResourceTable.Resource resource : resources) {
             String value = resource.resourceEntry.toStringValue(this.resourceTable, (Locale) null);
-            if (value != null) {
+            if (value != null && !value.startsWith("resourceId:0x")) {
                 map.put(resource.type.locale, value);
             }
         }
         return map;
+    }
+
+    @NonNull
+    public String getLabel(@Nullable Locale locale) {
+        if (this.labelResId == 0) {
+            String label = this.apkMetaBuilder.getLabel();
+            return label != null ? label : "";
+        }
+        String label = ResourceValue.reference((int) this.labelResId).toStringValue(this.resourceTable, locale);
+        if (label != null && !label.startsWith("resourceId:0x")) {
+            return label;
+        }
+        // Last fallback: use what was set in onStartTag (name or packageName)
+        String fallback = this.apkMetaBuilder.getLabel();
+        return fallback != null ? fallback : "";
     }
 
     @NonNull
@@ -261,12 +281,8 @@ public class ApkMetaTranslator implements XmlStreamer {
 
     private List<IconPath> extractIconPaths(Attribute iconAttr, String attrName) {
         final ResourceValue resourceValue = iconAttr.typedValue;
-//        if (resourceValue != null) {
-//            android.util.Log.d("AppLog", "icon fetching: extracting " + attrName + ", typedValue type: " + resourceValue.getClass().getSimpleName());
-//        }
         if (resourceValue instanceof ResourceValue.ReferenceResourceValue) {
             long resId = ((net.dongliu.apk.parser.struct.ResourceValue.ReferenceResourceValue) resourceValue).getReferenceResourceId();
-//            android.util.Log.d("AppLog", "icon fetching: extracting " + attrName + " from reference ID 0x" + Long.toHexString(resId));
             return extractIconPathsById(resId, attrName, new java.util.HashSet<Long>());
         } else {
             final String value = iconAttr.value;
@@ -275,9 +291,6 @@ public class ApkMetaTranslator implements XmlStreamer {
                 final IconPath iconPath = new IconPath(value, Densities.DEFAULT);
                 return Collections.singletonList(iconPath);
             }
-//            else {
-//                android.util.Log.d("AppLog", "icon fetching: " + attrName + " attribute exists but has no value");
-//            }
         }
         return Collections.emptyList();
     }
@@ -288,7 +301,6 @@ public class ApkMetaTranslator implements XmlStreamer {
 
         final List<ResourceTable.Resource> resources = this.resourceTable.getResourcesById(resourceId);
         if (resources.isEmpty()) {
-//            android.util.Log.d("AppLog", "icon fetching: no resources found for ID 0x" + Long.toHexString(resourceId));
             // Check if this might be a system resource that wasn't in our table
             if ((resourceId >> 24) == 0x01) {
                 String path = "resourceId:0x" + Long.toHexString(resourceId);
@@ -322,7 +334,6 @@ public class ApkMetaTranslator implements XmlStreamer {
     }
 
     private void updateApkMetaIcon(String path, String attrName) {
-//        android.util.Log.d("AppLog", "icon fetching: discovered " + attrName + " path: " + path);
         if ("icon".equals(attrName)) {
             this.apkMetaBuilder.setIcon(path);
         } else if ("roundIcon".equals(attrName)) {

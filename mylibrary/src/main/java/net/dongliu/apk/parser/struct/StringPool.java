@@ -42,4 +42,8 @@ public class StringPool {
             this.pool[idx] = value;
         }
     }
+    
+    public int length() {
+        return pool != null ? pool.length : 0;
+    }
 }

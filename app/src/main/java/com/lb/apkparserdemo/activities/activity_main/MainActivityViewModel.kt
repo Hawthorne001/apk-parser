@@ -59,17 +59,17 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
 
     @WorkerThread
     private fun performTests() {
-        val localeList =
-//                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-//                    val list = applicationContext.resources.configuration.locales
-//                    val result = mutableListOf<Locale>()
-//                    for (i in 0 until list.size()) {
-//                        result.add(list.get(i))
-//                    }
-//                    result
-//                } else {
-                listOf(Locale.getDefault())
-//                }
+        val localeList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val list = applicationContext.resources.configuration.locales
+            val result = mutableListOf<Locale>()
+            for (i in 0 until list.size()) {
+                result.add(list.get(i))
+            }
+            result
+        } else {
+            listOf(Locale.getDefault())
+        }
+        val mainLocale = localeList.firstOrNull()
         val context = applicationContext
         val appIconSize = AppInfoUtil.getAppIconSize(context)
         val packageManager = context.packageManager
@@ -77,7 +77,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-                    it.add("com.google.android.apps.nexuslauncher")
+//                    it.add("com.android.providers.calendar")
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
@@ -101,7 +101,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             val apkInfo = try {
                 val filters = allApkFilePaths.map { getZipFilter(it, ZIP_FILTER_TYPE) }
                 val info = ApkInfo.getConsolidatedApkInfo(
-                        localeList, filters,
+                        mainLocale, filters,
                         requestParseManifestXmlTagForApkType = GET_APK_TYPE,
                         requestParseResources = VALIDATE_RESOURCES
                 )
@@ -132,7 +132,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             if (VALIDATE_RESOURCES) {
                 //check if the library can get app icon, if required
                 val appIcon = ApkIconFetcher.getApkIcon(
-                        context, localeList, object : ApkIconFetcher.ZipFilterCreator {
+                        context, mainLocale, object : ApkIconFetcher.ZipFilterCreator {
                     override fun generateZipFilter(): AbstractZipFilter =
                             MultiZipFilter(allApkFilePaths.map { getZipFilter(it, ZIP_FILTER_TYPE) })
                 }, currentApkInfo, appIconSize
@@ -140,25 +140,25 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                 if (packageInfo.applicationInfo!!.icon != 0 && appIcon == null) {
                     failedGettingAppIconErrorsLiveData.inc()
                     if (isSystemApp) systemAppsErrorsCountLiveData.inc()
-                    Log.e("AppLog", "icon fetching: can\'t get app icon for \"$packageName\" in: \"$baseApkPath\"")
+                    Log.e("AppLog", "icon fetching error: can\'t get app icon for \"$packageName\" in: \"$baseApkPath\"")
                     // Log all entries in all APKs to see if the requested path exists
-                    for (apkPath in allApkFilePaths) {
-                        try {
-                            ZipFile(apkPath).use { zip ->
+//                    for (apkPath in allApkFilePaths) {
+//                        try {
+//                            ZipFile(apkPath).use { zip ->
                                 // Log.d("AppLog", "icon fetching: ZIP $apkPath has ${zip.size()} entries")
-                                val iconPaths = currentApkInfo.apkMetaTranslator.iconPaths.mapNotNull { it.path }
-                                for (p in iconPaths) {
+//                                val iconPaths = currentApkInfo.apkMetaTranslator.iconPaths.mapNotNull { it.path }
+//                                for (p in iconPaths) {
                                     // if (zip.getEntry(p) != null) Log.d("AppLog", "icon fetching: found $p in $apkPath")
                                     // else {
                                     // Try without leading res/ if it's there
                                     // val p2 = if (p.startsWith("res/")) p.substring(4) else p
                                     // if (zip.getEntry(p2) != null) Log.d("AppLog", "icon fetching: found $p2 (alt) in $apkPath")
                                     // }
-                                }
-                            }
-                        } catch (ignored: Exception) {
-                        }
-                    }
+//                                }
+//                            }
+//                        } catch (ignored: Exception) {
+//                        }
+//                    }
                 }
             }
             when {

@@ -21,7 +21,7 @@ class ApkInfo(
 
         @Suppress("SameParameterValue")
         fun internalGetApkInfo(
-            locales: List<Locale>,
+            preferredLocale: Locale?,
             baseZipFilter: AbstractZipFilter,
             extraZipFilters: List<AbstractZipFilter> = emptyList(),
             requestParseManifestXmlTagForApkType: Boolean = false,
@@ -42,7 +42,7 @@ class ApkInfo(
             val allLocales = mutableSetOf<Locale>()
             val resourceTable: ResourceTable =
                 if (masterResourceTable != null) {
-                    allLocales.addAll(masterResourceTable.getLocales())
+                    allLocales.addAll(masterResourceTable.locales)
                     masterResourceTable
                 } else {
                     val table = if (resourcesBytes == null) {
@@ -79,18 +79,18 @@ class ApkInfo(
                     }
                     table
                 }
-            val apkMetaTranslator = ApkMetaTranslator(resourceTable, locales)
+            val apkMetaTranslator = ApkMetaTranslator(resourceTable, preferredLocale)
             val binaryXmlParser = BinaryXmlParser(
                 ByteBuffer.wrap(manifestBytes), resourceTable,
                 CompositeXmlStreamer(xmlTranslator, apkMetaTranslator),
-                locales
+                preferredLocale
             )
             try {
                 binaryXmlParser.parse()
             } catch (e: Throwable) {
                 android.util.Log.e(
                     "AppLog",
-                    "label fetching: CRITICAL error during binaryXmlParser.parse()",
+                    "label fetching error: CRITICAL error during binaryXmlParser.parse()",
                     e
                 )
                 throw e
@@ -181,13 +181,13 @@ class ApkInfo(
         }
 
         fun getConsolidatedApkInfo(
-            locales: List<Locale>, filters: List<AbstractZipFilter>,
+            preferredLocale: Locale?, filters: List<AbstractZipFilter>,
             requestParseManifestXmlTagForApkType: Boolean = false,
             requestParseResources: Boolean = false
         ): ApkInfo? {
             if (filters.isEmpty()) return null
             if (filters.size == 1) return internalGetApkInfo(
-                locales,
+                preferredLocale,
                 filters[0],
                 emptyList(),
                 requestParseManifestXmlTagForApkType,
@@ -201,12 +201,12 @@ class ApkInfo(
                 val manifestBytes = filter.getByteArrayForEntries(hashSetOf(AndroidConstants.MANIFEST_FILE))
                     ?.get(AndroidConstants.MANIFEST_FILE)
                 if (manifestBytes != null) {
-                    val apkMetaTranslator = ApkMetaTranslator(ResourceTable(null), locales)
+                    val apkMetaTranslator = ApkMetaTranslator(ResourceTable(null), preferredLocale)
                     val binaryXmlParser = BinaryXmlParser(
                         ByteBuffer.wrap(manifestBytes),
                         ResourceTable(null),
                         apkMetaTranslator,
-                        locales
+                        preferredLocale
                     )
                     try {
                         binaryXmlParser.parse()
@@ -228,7 +228,7 @@ class ApkInfo(
             }
 
             return internalGetApkInfo(
-                locales,
+                preferredLocale,
                 baseFilter,
                 extraFilters,
                 requestParseManifestXmlTagForApkType,

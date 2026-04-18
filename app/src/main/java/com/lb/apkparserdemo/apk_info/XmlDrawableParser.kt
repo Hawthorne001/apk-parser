@@ -27,7 +27,7 @@ import java.util.*
 
 object XmlDrawableParser {
 
-    fun tryParseDrawable(context: Context, binXml: ByteArray, apkInfo: ApkInfo, locale: Locale, subResourceProvider: ((String) -> ByteArray?)? = null): Drawable? {
+    fun tryParseDrawable(context: Context, binXml: ByteArray, apkInfo: ApkInfo, locale: Locale?, subResourceProvider: ((String) -> ByteArray?)? = null): Drawable? {
         // android.util.Log.d("AppLog", "icon fetching: tryParseDrawable (Binary)")
         try {
             val xmlTranslator = XmlTranslator()
@@ -117,7 +117,7 @@ object XmlDrawableParser {
     private class VectorDrawableStreamer(
         private val context: Context,
         private val apkInfo: ApkInfo,
-        private val locale: Locale,
+        private val locale: Locale?,
         private val subResourceProvider: ((String) -> ByteArray?)?
     ) : XmlStreamer {
         var imageVector: ImageVector? = null
@@ -468,7 +468,7 @@ object XmlDrawableParser {
         context: Context,
         colorStr: String,
         apkInfo: ApkInfo? = null,
-        locale: Locale = Locale.getDefault(),
+        locale: Locale? = null,
         subResourceProvider: ((String) -> ByteArray?)? = null
     ): Brush? {
         val color = parseColor(context, colorStr)
@@ -490,7 +490,7 @@ object XmlDrawableParser {
         context: Context,
         bytes: ByteArray,
         apkInfo: ApkInfo,
-        locale: Locale,
+        locale: Locale?,
         subResourceProvider: ((String) -> ByteArray?)?
     ): Brush? {
         val streamer = GradientStreamer(context, apkInfo, locale, subResourceProvider)
@@ -507,7 +507,7 @@ object XmlDrawableParser {
     private class GradientStreamer(
         private val context: Context,
         private val apkInfo: ApkInfo,
-        private val locale: Locale,
+        private val locale: Locale?,
         private val subResourceProvider: ((String) -> ByteArray?)?
     ) : XmlStreamer {
         var brush: Brush? = null

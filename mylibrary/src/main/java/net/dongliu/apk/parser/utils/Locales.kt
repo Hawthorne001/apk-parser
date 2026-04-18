@@ -14,23 +14,25 @@ object Locales {
 
     /**
      * How much the given locale match the expected locale.
-     * Returns a level of matching:
-     * 4: Exact match (Language + Country)
-     * 3: Language-only match (app has generic language)
-     * 2: Language match, country mismatch
-     * 1: Default configuration (target is empty)
+     * Returns a score:
+     * 100: Exact match (Language + Country)
+     * 90: Exact match (Language only, both empty country)
+     * 80: Regional variant match (e.g., en_IL matching en_GB)
+     * 70: Language-only match (target has generic language)
+     * 50: Language match, country mismatch
+     * 10: Default configuration (target is empty)
      * 0: No match
      */
     @JvmStatic
     fun match(locale: Locale?, targetLocale: Locale): Int {
         if (locale == null) {
-            return 0
+            return if (targetLocale.language.isEmpty()) 10 else 0
         }
         val lang1 = normalizeLanguage(locale.language)
         val lang2 = normalizeLanguage(targetLocale.language)
         
         if (lang2.isEmpty()) {
-            return 1 // Default configuration matches everything at level 1
+            return 10 // Default configuration
         }
         
         if (lang1 != lang2) {
@@ -45,15 +47,32 @@ object Locales {
             return 0
         }
 
-        if (country1 == country2 && country1.isNotEmpty()) {
-            return 4 // Exact match
+        if (country1 == country2) {
+            return if (country1.isEmpty()) 90 else 100
         }
         
         if (country2.isEmpty()) {
-            return 3 // Language-only match (app has generic language)
+            return 70 // Language-only match (app has generic language)
         }
 
-        return 2 // Language match, country mismatch
+        // English variant matching
+        if (lang1 == "en") {
+            if (isInternationalEnglish(country1) && isInternationalEnglish(country2)) {
+                return 80
+            }
+            if (isNorthAmericanEnglish(country1) && isNorthAmericanEnglish(country2)) {
+                return 80
+            }
+        }
+
+        return 50 // Language match, country mismatch
+    }
+
+    private fun isNorthAmericanEnglish(country: String): Boolean {
+        return when (country) {
+            "US", "CA", "AS", "GU", "MP", "PR", "VI" -> true
+            else -> false
+        }
     }
 
     /**

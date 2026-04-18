@@ -57,23 +57,18 @@ public class BinaryXmlParser {
     @NonNull
     private final ResourceTable resourceTable;
     /**
-     * preferred locales.
+     * preferred locale.
      */
-    @NonNull
-    private final java.util.List<Locale> locales;
+    @Nullable
+    private final Locale locale;
 
     public BinaryXmlParser(final @NonNull ByteBuffer buffer, final @NonNull ResourceTable resourceTable, final @NonNull XmlStreamer xmlStreamer
-            , final @Nullable java.util.List<Locale> locales) {
+            , final @Nullable Locale locale) {
         this.buffer = buffer.duplicate();
         this.buffer.order(ByteOrder.LITTLE_ENDIAN);
         this.resourceTable = resourceTable;
         this.xmlStreamer = xmlStreamer;
-        this.locales = (locales == null || locales.isEmpty()) ? java.util.Collections.singletonList(Locales.any) : locales;
-    }
-
-    public BinaryXmlParser(final @NonNull ByteBuffer buffer, final @NonNull ResourceTable resourceTable, final @NonNull XmlStreamer xmlStreamer
-            , final @Nullable Locale locale) {
-        this(buffer, resourceTable, xmlStreamer, locale == null ? null : java.util.Collections.singletonList(locale));
+        this.locale = locale;
     }
 
     public void parse() {
@@ -192,10 +187,10 @@ public class BinaryXmlParser {
             final Attribute attribute = this.readAttribute();
             final String attributeName = attribute.name;
             if (attribute.typedValue instanceof ResourceValue.ReferenceResourceValue) {
-                long resId = ((ResourceValue.ReferenceResourceValue) attribute.typedValue).getReferenceResourceId();
+                // long resId = ((ResourceValue.ReferenceResourceValue) attribute.typedValue).getReferenceResourceId();
                 // android.util.Log.d("AppLog", "icon fetching: attr " + attributeName + " is reference 0x" + Long.toHexString(resId));
             }
-            String value = attribute.toStringValue(this.resourceTable, this.locales);
+            String value = attribute.toStringValue(this.resourceTable, this.locale);
             if (value != null && BinaryXmlParser.intAttributes.contains(attributeName) && Strings.isNumeric(value)) {
                 try {
                     value = this.getFinalValueAsString(attributeName, value);
@@ -330,14 +325,9 @@ public class BinaryXmlParser {
         }
     }
 
-    @NonNull
-    public java.util.List<Locale> getLocales() {
-        return this.locales;
-    }
-
-    @NonNull
+    @Nullable
     public Locale getLocale() {
-        return this.locales.get(0);
+        return this.locale;
     }
 
 }

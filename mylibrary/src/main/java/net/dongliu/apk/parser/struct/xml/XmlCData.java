@@ -35,11 +35,13 @@ public class XmlCData {
      * get value as string
      */
     @NonNull
-    public String toStringValue(final ResourceTable resourceTable, final Locale locale) {
+    public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
         if (this.data != null) {
             return XmlCData.CDATA_START + this.data + XmlCData.CDATA_END;
-        } else {
+        } else if (this.typedData != null) {
             return XmlCData.CDATA_START + this.typedData.toStringValue(resourceTable, locale) + XmlCData.CDATA_END;
+        } else {
+            return "";
         }
     }
 
