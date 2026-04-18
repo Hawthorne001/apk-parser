@@ -90,7 +90,7 @@ class ApkInfo(
             } catch (e: Throwable) {
                 android.util.Log.e(
                     "AppLog",
-                    "label fetching error: CRITICAL error during binaryXmlParser.parse()",
+                    "label fetching: error: CRITICAL error during binaryXmlParser.parse()",
                     e
                 )
                 throw e

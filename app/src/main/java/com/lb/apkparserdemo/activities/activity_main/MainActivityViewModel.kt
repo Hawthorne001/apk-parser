@@ -77,7 +77,10 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-//                    it.add("com.android.providers.calendar")
+                    it.add("com.android.wallpaper")
+                    it.add("com.google.android.apps.wallpaper")
+                    it.add("com.google.android.odad")
+                    it.add("com.google.android.cellbroadcastreceiver")
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
@@ -105,10 +108,6 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                         requestParseManifestXmlTagForApkType = GET_APK_TYPE,
                         requestParseResources = VALIDATE_RESOURCES
                 )
-                // We shouldn't close them if we still need them?
-                // Actually, getConsolidatedApkInfo uses them to parse resources.
-                // Once it returns, they can be closed UNLESS we want to keep using them.
-                // But in this loop, we create new ones for icons anyway.
                 filters.forEach {
                     try {
                         it.close()
@@ -140,25 +139,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                 if (packageInfo.applicationInfo!!.icon != 0 && appIcon == null) {
                     failedGettingAppIconErrorsLiveData.inc()
                     if (isSystemApp) systemAppsErrorsCountLiveData.inc()
-                    Log.e("AppLog", "icon fetching error: can\'t get app icon for \"$packageName\" in: \"$baseApkPath\"")
-                    // Log all entries in all APKs to see if the requested path exists
-//                    for (apkPath in allApkFilePaths) {
-//                        try {
-//                            ZipFile(apkPath).use { zip ->
-                                // Log.d("AppLog", "icon fetching: ZIP $apkPath has ${zip.size()} entries")
-//                                val iconPaths = currentApkInfo.apkMetaTranslator.iconPaths.mapNotNull { it.path }
-//                                for (p in iconPaths) {
-                                    // if (zip.getEntry(p) != null) Log.d("AppLog", "icon fetching: found $p in $apkPath")
-                                    // else {
-                                    // Try without leading res/ if it's there
-                                    // val p2 = if (p.startsWith("res/")) p.substring(4) else p
-                                    // if (zip.getEntry(p2) != null) Log.d("AppLog", "icon fetching: found $p2 (alt) in $apkPath")
-                                    // }
-//                                }
-//                            }
-//                        } catch (ignored: Exception) {
-//                        }
-//                    }
+                    Log.e("AppLog", "fetching error: can\'t get app icon for \"$packageName\" in: \"$baseApkPath\"")
                 }
             }
             when {
@@ -214,7 +195,6 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                     }
                 }
             }
-            // Log.d("AppLog", "apk data of $baseApkPath : ${apkMeta.packageName}, ${apkMeta.versionCode}, ${apkMeta.versionName}, $labelOfLibrary, ${apkMetaTranslator.iconPaths}")
             apkFilesHandledLiveData.inc()
             ++apksHandledSoFar
             appsHandledLiveData.inc()

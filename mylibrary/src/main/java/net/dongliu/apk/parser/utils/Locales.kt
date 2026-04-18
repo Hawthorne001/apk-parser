@@ -75,67 +75,11 @@ object Locales {
         }
     }
 
-    /**
-     * Find the best matching score for a list of locales.
-     * Higher is better.
-     */
-    @JvmStatic
-    fun matchScore(locales: List<Locale>, targetLocale: Locale): Long {
-        if (locales.isEmpty()) {
-            return if (targetLocale.language.isEmpty()) 1L else 0L
-        }
-        
-        for (i in 0 until locales.size) {
-            val level = match(locales.get(i), targetLocale)
-            if (level >= 1) {
-                // Primary weight: Position in user's preference list.
-                // Secondary weight: Specificity of match (exact > language-only > country-mismatch > default).
-                var score = (locales.size - i).toLong() * 1000000L + level * 10000L
-                
-                // Tertiary weight: Country tie-breakers for common languages.
-                val country1 = locales.get(i).country
-                val country2 = targetLocale.country
-                if (country2.length == 2) {
-                    if (country1 == country2) score += 9000
-                    else if (isInternationalEnglish(country1) && isInternationalEnglish(country2)) {
-                        if (country2 == "GB") score += 8500
-                        else if (country2 == "US") score += 8000
-                        else score += (90 - country2[0].code).toLong() * 20 + (90 - country2[1].code).toLong()
-                    } else if (country2 == "GB") score += 5000
-                    else if (country2 == "US") score += 4000
-                    else score += (90 - country2[0].code).toLong() * 10 + (90 - country2[1].code).toLong()
-                } else if (targetLocale.language.isNotEmpty()) {
-                    score += 7000
-                }
-                return score
-            }
-        }
-        
-        return 0L
-    }
-
     private fun isInternationalEnglish(country: String): Boolean {
         return when (country) {
             "001", "150", "GB", "AU", "NZ", "IE", "IL", "IN", "ZA", "SG", "HK", "MT", "MY", "PK" -> true
             else -> false
         }
-    }
-
-    /**
-     * Get the best matching locale from the app's supported locales for the given user preference list.
-     */
-    @JvmStatic
-    fun getBestMatch(locales: List<Locale>, appLocales: Set<Locale>): Locale {
-        var bestLocale = any
-        var maxScore: Long = -1
-        for (appLocale in appLocales) {
-            val score = matchScore(locales, appLocale)
-            if (score > maxScore) {
-                maxScore = score
-                bestLocale = appLocale
-            }
-        }
-        return bestLocale
     }
 
     /**
