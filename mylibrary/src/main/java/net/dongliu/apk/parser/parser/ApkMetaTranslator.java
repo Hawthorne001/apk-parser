@@ -254,7 +254,12 @@ public class ApkMetaTranslator implements XmlStreamer {
         for (ResourceTable.Resource resource : resources) {
             String value = resource.resourceEntry.toStringValue(this.resourceTable, resource.type.locale);
             if (value != null && !value.startsWith("resourceId:0x")) {
-                map.put(resource.type.locale, value);
+                // If multiple entries exist for the same locale (e.g. split APKs), 
+                // we should pick the best one. For now, prefer the first one encountered 
+                // if they have the same configuration specificity.
+                if (!map.containsKey(resource.type.locale)) {
+                    map.put(resource.type.locale, value);
+                }
             }
         }
         return map;

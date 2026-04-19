@@ -27,25 +27,9 @@ public class ResourceTable {
     @NonNull
     public static final Map<Integer, String> sysStyle = ResourceLoader.loadSystemStyles();
     public final Set<Locale> locales = new HashSet<>();
-    private final Map<Long, Map<Locale, String>> stringCache = new HashMap<>();
 
     public ResourceTable(@Nullable final StringPool stringPool) {
         this.stringPool = stringPool;
-    }
-
-    @Nullable
-    public String getCachedString(long resId, @Nullable Locale locale) {
-        Map<Locale, String> localeMap = stringCache.get(resId);
-        return localeMap != null ? localeMap.get(locale) : null;
-    }
-
-    public void cacheString(long resId, @Nullable Locale locale, String value) {
-        Map<Locale, String> localeMap = stringCache.get(resId);
-        if (localeMap == null) {
-            localeMap = new HashMap<>();
-            stringCache.put(resId, localeMap);
-        }
-        localeMap.put(locale, value);
     }
 
     public void addPackage(final @NonNull ResourcePackage resourcePackage) {

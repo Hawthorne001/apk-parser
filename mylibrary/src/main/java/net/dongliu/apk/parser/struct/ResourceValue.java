@@ -179,10 +179,6 @@ public abstract class ResourceValue {
             if (resourceTable == null) {
                 return raw;
             }
-            String cached = resourceTable.getCachedString(resourceId, locale);
-            if (cached != null) {
-                return cached;
-            }
             final List<ResourceTable.Resource> resources = resourceTable.getResourcesById(resourceId);
             if (resources.isEmpty()) {
                 // If it's a platform resource that wasn't in our table, we can't resolve it.
@@ -209,12 +205,12 @@ public abstract class ResourceValue {
                     currentDensityLevel = densityLevel;
                     currentMaxSdkVersion = sdkVersion;
                 } else if (matchScore > 0 && matchScore == currentMaxScore) {
-                    // Tie-breaking: Density, then SDK Version, then Order (latest wins)
+                    // Tie-breaking: Density, then SDK Version, then Order (first wins if identical)
                     if (densityLevel > currentDensityLevel) {
                         selectedResource = resource;
                         currentDensityLevel = densityLevel;
                         currentMaxSdkVersion = sdkVersion;
-                    } else if (densityLevel == currentDensityLevel && sdkVersion >= currentMaxSdkVersion) {
+                    } else if (densityLevel == currentDensityLevel && sdkVersion > currentMaxSdkVersion) {
                         selectedResource = resource;
                         currentMaxSdkVersion = sdkVersion;
                     }
@@ -224,21 +220,16 @@ public abstract class ResourceValue {
             // Recurse to get the value of the selected entry
             if (selectedResource != null) {
                 String result = selectedResource.resourceEntry.toStringValue(resourceTable, locale);
-                if (result != null) {
-                    resourceTable.cacheString(resourceId, locale, result);
-                }
 
                 // Logging and filtering for app label identification
                 if (selectedResource.typeSpec.name.equals("string")) {
-//                    android.util.Log.d("AppLog", "label fetching: ID 0x" + Long.toHexString(resourceId) + " recursed to result: " + result + " locale:" +  selectedResource.type.locale);
-
                     long id = resourceId;
                     if (id == 0x7f120024 || id == 0x7f12014f || id == 0x7f12001e) {
                         StringBuilder sb = new StringBuilder();
                         sb.append("label fetching: ID 0x").append(Long.toHexString(id))
                                 .append(" recursed to result: ").append(result)
                                 .append(" locale:").append(selectedResource.type.locale)
-                                .append(" sdk:").append(selectedResource.type.config.getSdkVersion())
+                                .append(" config:").append(selectedResource.type.config)
                                 .append(" stack:\n");
                         StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
                         for (int i = 2; i < Math.min(stackTrace.length, 12); i++) {
@@ -249,7 +240,7 @@ public abstract class ResourceValue {
                         // Log all candidates for this important ID to see selection logic in action
                         for (final ResourceTable.Resource res : resources) {
                             int s = Locales.match(locale, res.type.locale);
-                            android.util.Log.d("AppLog", "label fetching: candidate for 0x" + Long.toHexString(id) + ": locale=" + res.type.locale + " sdk=" + res.type.config.getSdkVersion() + " score=" + s + " entry=" + res.resourceEntry);
+                            android.util.Log.d("AppLog", "label fetching: candidate for 0x" + Long.toHexString(id) + ": locale=" + res.type.locale + " config=" + res.type.config + " score=" + s + " entry=" + res.resourceEntry);
                         }
                     }
                 }
