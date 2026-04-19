@@ -186,12 +186,12 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             val labelOfLibrary = apkMeta.label ?: apkMeta.packageName
             if (VALIDATE_RESOURCES) {
                 val expectedAppLabel = packageInfo.applicationInfo!!.loadLabel(packageManager)
-//                if (packageName == "com.google.android.cellbroadcastreceiver") {
-//                    //check for a specific app, of its label translations:
-//                    val allLabels = apkMetaTranslator.getAllLabels()
-//                    val enCaLabel= allLabels[Locale("EN","CA")]
-//                    Log.d("AppLog", "label fetching: label in en-CA is \"$enCaLabel\"")
-//                }
+                if (packageName == "com.google.android.cellbroadcastreceiver") {
+                    //check for a specific app, of its label translations:
+                    val allLabels = apkMetaTranslator.getAllLabels()
+                    val enCaLabel = allLabels[Locale("EN", "CA")]
+                    Log.d("AppLog", "label fetching: library label for en-CA is \"$enCaLabel\"")
+                }
                 if (expectedAppLabel != labelOfLibrary.toString()) {
                     wrongLabelErrorsLiveData.inc()
                     if (isSystemApp) systemAppsErrorsCountLiveData.inc()
@@ -209,14 +209,8 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             appsHandledLiveData.inc()
         }
         endTime = System.currentTimeMillis()
-        Log.d(
-                "AppLog",
-                "time taken(ms): ${endTime - startTime} . handled ${installedPackages.size} apps, apksCount:$apksHandledSoFar"
-        )
-        Log.d(
-                "AppLog",
-                "averageTime(ms):${(endTime - startTime).toFloat() / installedPackages.size.toFloat()} per app, ${(endTime - startTime).toFloat() / apksHandledSoFar.toFloat()} per APK"
-        )
+        Log.d("AppLog", "time taken(ms): ${endTime - startTime} . handled ${installedPackages.size} apps, apksCount:$apksHandledSoFar")
+        Log.d("AppLog", "averageTime(ms):${(endTime - startTime).toFloat() / installedPackages.size.toFloat()} per app, ${(endTime - startTime).toFloat() / apksHandledSoFar.toFloat()} per APK")
         Log.d("AppLog", "Final stats: labelErrors=${wrongLabelErrorsLiveData.value}, iconErrors=${failedGettingAppIconErrorsLiveData.value}, parsingErrors=${parsingErrorsLiveData.value}")
         Log.e("AppLog", "done")
         isDoneLiveData.postValue(true)

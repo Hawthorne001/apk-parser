@@ -230,6 +230,8 @@ public abstract class ResourceValue {
 
                 // Logging and filtering for app label identification
                 if (selectedResource.typeSpec.name.equals("string")) {
+                    android.util.Log.d("AppLog", "label fetching: ID 0x" + Long.toHexString(resourceId) + " recursed to result: " + result + " locale:" +  selectedResource.type.locale);
+
                     long id = resourceId;
                     if (id == 0x7f120024 || id == 0x7f12014f || id == 0x7f12001e) {
                         StringBuilder sb = new StringBuilder();
@@ -245,10 +247,10 @@ public abstract class ResourceValue {
                         android.util.Log.d("AppLog", sb.toString());
 
                         // Log all candidates for this important ID to see selection logic in action
-//                        for (final ResourceTable.Resource res : resources) {
-//                            int s = Locales.match(locale, res.type.locale);
-//                            android.util.Log.d("AppLog", "label fetching: candidate for 0x" + Long.toHexString(id) + ": locale=" + res.type.locale + " sdk=" + res.type.config.getSdkVersion() + " score=" + s + " entry=" + res.resourceEntry);
-//                        }
+                        for (final ResourceTable.Resource res : resources) {
+                            int s = Locales.match(locale, res.type.locale);
+                            android.util.Log.d("AppLog", "label fetching: candidate for 0x" + Long.toHexString(id) + ": locale=" + res.type.locale + " sdk=" + res.type.config.getSdkVersion() + " score=" + s + " entry=" + res.resourceEntry);
+                        }
                     }
                 }
                 return result;

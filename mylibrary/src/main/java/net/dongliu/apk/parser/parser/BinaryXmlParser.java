@@ -22,7 +22,6 @@ import net.dongliu.apk.parser.struct.xml.XmlNodeHeader;
 import net.dongliu.apk.parser.struct.xml.XmlNodeStartTag;
 import net.dongliu.apk.parser.struct.xml.XmlResourceMapHeader;
 import net.dongliu.apk.parser.utils.Buffers;
-import net.dongliu.apk.parser.utils.Locales;
 import net.dongliu.apk.parser.utils.ParseUtils;
 import net.dongliu.apk.parser.utils.Strings;
 
