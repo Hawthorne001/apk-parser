@@ -8,7 +8,6 @@ import net.dongliu.apk.parser.struct.ChunkHeader;
 import net.dongliu.apk.parser.struct.ChunkType;
 import net.dongliu.apk.parser.struct.StringPool;
 import net.dongliu.apk.parser.struct.StringPoolHeader;
-import net.dongliu.apk.parser.struct.resource.LibraryEntry;
 import net.dongliu.apk.parser.struct.resource.LibraryHeader;
 import net.dongliu.apk.parser.struct.resource.NullHeader;
 import net.dongliu.apk.parser.struct.resource.PackageHeader;
@@ -119,7 +118,7 @@ public class ResourceTableParser {
                     final String typeSpecName = resourcePackage.getTypeStringPool()
                             .get(typeSpecHeader.getId() - 1);
                     final TypeSpec typeSpec = new TypeSpec(typeSpecHeader, entryFlags, typeSpecName);
-                    android.util.Log.d("AppLog", "label fetching: in package 0x" + Integer.toHexString(resourcePackage.getId()) + ", adding typeSpec " + typeSpecName + " with ID 0x" + Integer.toHexString(typeSpecHeader.getId()) + " count: " + typeSpecHeader.getEntryCount());
+                    // android.util.Log.d("AppLog", "label fetching: in package 0x" + Integer.toHexString(resourcePackage.getId()) + ", adding typeSpec " + typeSpecName + " with ID 0x" + Integer.toHexString(typeSpecHeader.getId()) + " count: " + typeSpecHeader.getEntryCount());
                     resourcePackage.addTypeSpec(typeSpec);
                     Buffers.position(this.buffer, chunkBegin + typeSpecHeader.getBodySize());
                     break;
@@ -149,9 +148,9 @@ public class ResourceTableParser {
                     final String typeName = resourcePackage.getTypeStringPool().get(typeHeader.getId() - 1);
                     type.setName(typeName);
                     // android.util.Log.d("AppLog", "label fetching: in package 0x" + Integer.toHexString(resourcePackage.getId()) + ", adding type " + typeName + " with ID 0x" + Integer.toHexString(typeHeader.getId()) + " count: " + typeHeader.entryCount + " config: " + type.locale);
-                    if (typeName != null && ("string".equals(typeName) || typeName.contains("label"))) {
-                         android.util.Log.d("AppLog", "label fetching: in package 0x" + Integer.toHexString(resourcePackage.getId()) + ", adding type " + typeName + " with ID 0x" + Integer.toHexString(typeHeader.getId()) + " count: " + typeHeader.entryCount + " config: " + type.locale);
-                    }
+                    // if (typeName != null && ("string".equals(typeName) || typeName.contains("label"))) {
+                    //      android.util.Log.d("AppLog", "label fetching: in package 0x" + Integer.toHexString(resourcePackage.getId()) + ", adding type " + typeName + " with ID 0x" + Integer.toHexString(typeHeader.getId()) + " count: " + typeHeader.entryCount + " config: " + type.locale);
+                    // }
                     final long entryPos = chunkBegin + typeHeader.entriesStart - (int) typeHeader.headerSize;
                     Buffers.position(this.buffer, entryPos);
                     final ByteBuffer b = this.buffer.slice();

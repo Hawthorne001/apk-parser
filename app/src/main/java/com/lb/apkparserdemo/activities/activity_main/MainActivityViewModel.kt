@@ -77,10 +77,14 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-                    it.add("com.android.wallpaper")
-                    it.add("com.google.android.apps.wallpaper")
-                    it.add("com.google.android.odad")
-                    it.add("com.google.android.cellbroadcastreceiver")
+//                    it.add("com.android.wallpaper")
+//                    it.add("com.google.android.apps.setupwizard.searchselector")
+//                    it.add("com.google.android.odad")
+//                    it.add("com.google.android.cellbroadcastreceiver")
+                    it.add("com.google.android.apps.pixel.dcservice")
+//                    it.add("com.google.android.photopicker")
+//                    it.add("com.google.android.storagemanager")
+
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)

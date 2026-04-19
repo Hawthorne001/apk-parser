@@ -1,5 +1,7 @@
 package net.dongliu.apk.parser.struct;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -140,7 +142,7 @@ public abstract class ResourceValue {
             if (this.value >= 0) {
                 String result = this.stringPool.get(this.value);
                 if (result == null) {
-                     android.util.Log.d("AppLog", "label fetching: StringPool returned null for index 0x" + Integer.toHexString(this.value) + " (pool length: " + stringPool.length() + ")");
+                    android.util.Log.d("AppLog", "label fetching: StringPool returned null for index 0x" + Integer.toHexString(this.value) + " (pool length: " + stringPool.length() + ")");
                 }
                 return result;
             } else {
@@ -157,7 +159,7 @@ public abstract class ResourceValue {
     }
 
     /**
-     * ReferenceResource ref one another resources, and may has different value for different resource config(locale, density, etc)
+     * ReferenceResource ref one another resources, and may have different value for different resource config(locale, density, etc)
      */
     public static class ReferenceResourceValue extends ResourceValue {
 
@@ -198,7 +200,9 @@ public abstract class ResourceValue {
             for (final ResourceTable.Resource resource : resources) {
                 final int matchScore = Locales.match(locale, resource.type.locale);
                 final int densityLevel = ReferenceResourceValue.densityLevel(resource.type.density);
+                Log.d("AppLog", "label fetching: inspection of resource locale for now: " + resource.type.locale + " score:" + matchScore + " value:"+resource.resourceEntry.toStringValue(resourceTable, locale));
                 if (matchScore > currentMaxScore) {
+//                    Log.d("AppLog", "label fetching: selected locale for now: "+resource.type.locale+" score:"+matchScore);
                     selected = resource.resourceEntry;
                     currentMaxScore = matchScore;
                     currentDensityLevel = densityLevel;
@@ -206,11 +210,6 @@ public abstract class ResourceValue {
                     selected = resource.resourceEntry;
                     currentDensityLevel = densityLevel;
                 }
-            }
-
-            if (selected == null) {
-                // Absolute fallback - pick the first available
-                selected = resources.get(0).resourceEntry;
             }
 
             // Recurse to get the value of the selected entry
