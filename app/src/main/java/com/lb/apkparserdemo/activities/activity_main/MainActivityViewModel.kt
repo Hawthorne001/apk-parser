@@ -89,7 +89,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         val appsToFocusOn = HashSet<String>()
                 .also {
 //                    it.add("com.lb.myapplication")
-                    it.add("com.android.wallpaper")
+//                    it.add("com.android.wallpaper")
 //                    it.add("com.google.android.apps.wallpaper")
 //                    it.add("com.google.android.odad")
 

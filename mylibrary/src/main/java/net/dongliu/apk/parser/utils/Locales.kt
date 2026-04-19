@@ -27,8 +27,10 @@ object Locales {
         }
 
         // Default/Empty configuration is the lowest possible positive match
+        // BUT it must be better than a non-representative sibling.
+        // Sibling = 5, Default = 10, Representative = 40, Language Match = 50, Perfect = MAX
         if (candidate.language.isEmpty()) {
-            return 1
+            return 10
         }
 
         // If languages are different, they definitely don't match
@@ -69,8 +71,8 @@ object Locales {
         }
 
         // 6. Sibling (same language, different country, neither is a representative)
-        // A sibling match is still better than the default/empty configuration (score 1),
-        // but worse than any of the above matches.
+        // A sibling match is still better than nothing (score 0),
+        // but worse than the default/empty configuration (score 10).
         return 5
     }
 
