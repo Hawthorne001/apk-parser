@@ -73,8 +73,16 @@ public class ResTableConfig {
         this.size = size;
     }
 
+    public int getMcc() {
+        return mcc & 0xffff;
+    }
+
     public void setMcc(short mcc) {
         this.mcc = mcc;
+    }
+
+    public int getMnc() {
+        return mnc & 0xffff;
     }
 
     public void setMnc(short mnc) {

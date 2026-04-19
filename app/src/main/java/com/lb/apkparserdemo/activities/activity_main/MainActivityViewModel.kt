@@ -91,10 +91,11 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
 //                    it.add("com.android.wallpaper")
 //                    it.add("com.google.android.apps.setupwizard.searchselector")
 //                    it.add("com.google.android.odad")
-                    it.add("com.google.android.cellbroadcastreceiver")
+//                    it.add("com.google.android.cellbroadcastreceiver")
 //                    it.add("com.google.android.apps.pixel.dcservice")
 //                    it.add("com.google.android.photopicker")
 //                    it.add("com.google.android.storagemanager")
+                    it.add("com.lb.myapplication")
 
                 }
         val installedPackages =
@@ -199,6 +200,19 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                     wrongLabelErrorsLiveData.inc()
                     if (isSystemApp) systemAppsErrorsCountLiveData.inc()
                     Log.e("AppLog", "label mismatch for \"${packageName}\": correct=\"$expectedAppLabel\" vs found=\"$labelOfLibrary\" apks:${allApkFilePaths.joinToString()}")
+                }
+
+                // Mirror framework's nonLocalizedLabel (hardcoded string in manifest)
+                val nonLocalizedLabelOfLibrary = currentApkInfo.apkMetaTranslator.getNonLocalizedLabel()
+                val nonLocalizedLabelOfFramework = packageInfo.applicationInfo?.nonLocalizedLabel?.toString()
+                if (nonLocalizedLabelOfFramework != nonLocalizedLabelOfLibrary) {
+                    Log.e("AppLog", "nonLocalizedLabel mismatch for \"$packageName\": framework=\"$nonLocalizedLabelOfFramework\" library=\"$nonLocalizedLabelOfLibrary\"")
+                }
+
+                // Get the default translation (usually from values/strings.xml)
+                val defaultLabelOfLibrary = currentApkInfo.apkMetaTranslator.getDefaultLabel()
+                if (packageName == "com.google.android.cellbroadcastreceiver") {
+                     Log.d("AppLog", "label fetching: Default label for \"$packageName\": $defaultLabelOfLibrary")
                 }
             }
             apkFilesHandledLiveData.inc()

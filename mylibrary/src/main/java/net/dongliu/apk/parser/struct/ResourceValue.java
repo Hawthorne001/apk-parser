@@ -189,39 +189,82 @@ public abstract class ResourceValue {
             }
 
             ResourceTable.Resource selectedResource = null;
-            int currentMaxScore = -1;
-            int currentDensityLevel = -1;
-            int currentMaxSdkVersion = -1;
+            int currentMaxScore = 0; // Start at 0 to only accept positive matches
 
             // Search for the best locale match
             for (final ResourceTable.Resource resource : resources) {
                 final int matchScore = Locales.match(locale, resource.type.locale);
-                final int densityLevel = ReferenceResourceValue.densityLevel(resource.type.density);
-                final int sdkVersion = resource.type.config.getSdkVersion();
 
                 if (matchScore > currentMaxScore) {
                     selectedResource = resource;
                     currentMaxScore = matchScore;
-                    currentDensityLevel = densityLevel;
-                    currentMaxSdkVersion = sdkVersion;
                 } else if (matchScore > 0 && matchScore == currentMaxScore) {
-                    // Tie-breaking: Density, then SDK Version, then Order (first wins if identical)
-                    if (densityLevel > currentDensityLevel) {
+                    // Tie-breaker: pick the more specific configuration
+                    if (isBetterThan(resource, selectedResource)) {
                         selectedResource = resource;
-                        currentDensityLevel = densityLevel;
-                        currentMaxSdkVersion = sdkVersion;
-                    } else if (densityLevel == currentDensityLevel && sdkVersion > currentMaxSdkVersion) {
-                        selectedResource = resource;
-                        currentMaxSdkVersion = sdkVersion;
                     }
                 }
             }
 
             // Recurse to get the value of the selected entry
             if (selectedResource != null) {
-                return selectedResource.resourceEntry.toStringValue(resourceTable, locale);
+                String result = selectedResource.resourceEntry.toStringValue(resourceTable, locale);
+
+                // Logging and filtering for app label identification
+                if (selectedResource.typeSpec.name.equals("string")) {
+                    long id = resourceId;
+                    if (id == 0x7f120024 || id == 0x7f12014f || id == 0x7f12001e) {
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("label fetching: ID 0x").append(Long.toHexString(id))
+                                .append(" selected result: ").append(result)
+                                .append(" locale:").append(selectedResource.type.locale)
+                                .append(" config:").append(selectedResource.type.config)
+                                .append(" score:").append(currentMaxScore)
+                                .append("\n");
+                        android.util.Log.d("AppLog", sb.toString());
+
+                        // Log all candidates for this important ID to see selection logic in action
+                        for (final ResourceTable.Resource res : resources) {
+                            int s = Locales.match(locale, res.type.locale);
+                            android.util.Log.d("AppLog", "label fetching: candidate for 0x" + Long.toHexString(id) + ": locale=" + res.type.locale + " config=" + res.type.config + " score=" + s + " entry=" + res.resourceEntry);
+                        }
+                    }
+                }
+                return result;
             }
             return null;
+        }
+
+        /**
+         * Rudimentary configuration specificity comparison.
+         * Returns true if 'candidate' is a better match than 'current'.
+         */
+        private boolean isBetterThan(ResourceTable.Resource candidate, ResourceTable.Resource current) {
+            if (current == null) return true;
+
+            // 1. MCC/MNC matching is very high priority in Android
+            if (candidate.type.config.getMcc() != current.type.config.getMcc()) {
+                return candidate.type.config.getMcc() != 0;
+            }
+            if (candidate.type.config.getMnc() != current.type.config.getMnc()) {
+                return candidate.type.config.getMnc() != 0;
+            }
+
+            // 2. SDK Version
+            if (candidate.type.config.getSdkVersion() != current.type.config.getSdkVersion()) {
+                return candidate.type.config.getSdkVersion() > current.type.config.getSdkVersion();
+            }
+
+            // 3. Density
+            int candidateDensity = densityLevel(candidate.type.density);
+            int currentDensity = densityLevel(current.type.density);
+            if (candidateDensity != currentDensity) {
+                // Higher density wins as a tie-breaker.
+                return candidateDensity > currentDensity;
+            }
+
+            // If everything else is same, stick with first one (Base APK usually)
+            return false;
         }
 
         public long getReferenceResourceId() {

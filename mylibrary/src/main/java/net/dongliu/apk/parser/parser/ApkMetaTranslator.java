@@ -54,11 +54,13 @@ public class ApkMetaTranslator implements XmlStreamer {
 
     private String resolvedLabel;
     private Locale resolvedLabelLocale;
+    private String nonLocalizedLabel;
 
     @Override
     public void onStartTag(final @NonNull XmlNodeStartTag xmlNodeStartTag) {
         final Attributes attributes = xmlNodeStartTag.attributes;
         final String xmlNodeStartTagName = xmlNodeStartTag.name;
+        // android.util.Log.d("AppLog", "icon fetching: manifest tag encountered: <" + xmlNodeStartTagName + ">");
         switch (xmlNodeStartTagName) {
             case "application": {
                 this.apkMetaBuilder.setDebuggable(attributes.getBoolean("debuggable", false));
@@ -78,8 +80,10 @@ public class ApkMetaTranslator implements XmlStreamer {
                 if (labelAttr != null) {
                     if (labelAttr.typedValue instanceof net.dongliu.apk.parser.struct.ResourceValue.ReferenceResourceValue) {
                         this.labelResId = ((net.dongliu.apk.parser.struct.ResourceValue.ReferenceResourceValue) labelAttr.typedValue).getReferenceResourceId();
+                    } else {
+                        this.nonLocalizedLabel = labelAttr.value;
                     }
-                    
+
                     // Step 1: Use already resolved value if available, else try matched locale
                     label = labelAttr.value;
                     if (label == null) {
@@ -250,18 +254,33 @@ public class ApkMetaTranslator implements XmlStreamer {
         }
         List<ResourceTable.Resource> resources = this.resourceTable.getResourcesById(this.labelResId);
         java.util.Map<Locale, String> map = new java.util.HashMap<>();
+        java.util.Map<Locale, ResourceTable.Resource> bestResources = new java.util.HashMap<>();
+
         for (ResourceTable.Resource resource : resources) {
             String value = resource.resourceEntry.toStringValue(this.resourceTable, resource.type.locale);
             if (value != null && !value.startsWith("resourceId:0x")) {
-                // If multiple entries exist for the same locale (e.g. split APKs), 
-                // we should pick the best one. For now, prefer the first one encountered 
-                // if they have the same configuration specificity.
-                if (!map.containsKey(resource.type.locale)) {
+                ResourceTable.Resource currentBest = bestResources.get(resource.type.locale);
+                if (currentBest == null || isBetterThan(resource, currentBest)) {
+                    bestResources.put(resource.type.locale, resource);
                     map.put(resource.type.locale, value);
                 }
             }
         }
         return map;
+    }
+
+    private boolean isBetterThan(ResourceTable.Resource candidate, ResourceTable.Resource current) {
+        if (current == null) return true;
+        if (candidate.type.config.getMcc() != current.type.config.getMcc()) {
+            return candidate.type.config.getMcc() != 0;
+        }
+        if (candidate.type.config.getMnc() != current.type.config.getMnc()) {
+            return candidate.type.config.getMnc() != 0;
+        }
+        if (candidate.type.config.getSdkVersion() != current.type.config.getSdkVersion()) {
+            return candidate.type.config.getSdkVersion() > current.type.config.getSdkVersion();
+        }
+        return false;
     }
 
     @NonNull
@@ -280,6 +299,23 @@ public class ApkMetaTranslator implements XmlStreamer {
         // Last fallback: use what was set in onStartTag (name or packageName)
         String fallback = this.apkMetaBuilder.getLabel();
         return fallback != null ? fallback : "";
+    }
+
+    /**
+     * Get the default label (literal string if present, otherwise default resource value).
+     */
+    @NonNull
+    public String getDefaultLabel() {
+        return getLabel(null);
+    }
+
+    /**
+     * Get the non-localized label (literal string in manifest).
+     * Mirror of {@link android.content.pm.ApplicationInfo#nonLocalizedLabel}.
+     */
+    @Nullable
+    public String getNonLocalizedLabel() {
+        return this.nonLocalizedLabel;
     }
 
     @NonNull
