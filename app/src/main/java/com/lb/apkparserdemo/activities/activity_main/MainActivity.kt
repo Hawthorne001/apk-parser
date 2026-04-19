@@ -2,19 +2,23 @@ package com.lb.apkparserdemo.activities.activity_main
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.util.TypedValue
-import android.view.*
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.AttrRes
 import androidx.annotation.ColorInt
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
-import androidx.core.view.*
+import androidx.core.view.MenuProvider
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
+import androidx.core.view.updatePadding
 import androidx.lifecycle.ViewModelProvider
-import com.lb.apkparserdemo.R
 import com.lb.apkparserdemo.databinding.ActivityMainBinding
 
 class MainActivity : BoundActivity<ActivityMainBinding>(ActivityMainBinding::inflate) {

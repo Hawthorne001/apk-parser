@@ -9,8 +9,8 @@ import net.dongliu.apk.parser.utils.Buffers;
 import net.dongliu.apk.parser.utils.ParseUtils;
 
 import java.nio.ByteBuffer;
-import java.util.Locale;
 import java.util.Arrays;
+import java.util.Locale;
 
 /**
  * @author dongliu

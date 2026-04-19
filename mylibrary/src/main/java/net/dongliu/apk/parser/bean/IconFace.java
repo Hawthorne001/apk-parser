@@ -1,8 +1,8 @@
 package net.dongliu.apk.parser.bean;
 
-import java.io.Serializable;
-
 import androidx.annotation.Nullable;
+
+import java.io.Serializable;
 
 /**
  * The icon interface

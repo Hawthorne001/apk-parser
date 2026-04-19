@@ -1,7 +1,7 @@
 package com.lb.apkparserdemo.apk_info
 
 import java.io.Closeable
-import java.util.*
+import java.util.Enumeration
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 

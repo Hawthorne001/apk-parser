@@ -1,17 +1,21 @@
 package com.lb.apkparserdemo.apk_info
 
-import net.dongliu.apk.parser.parser.*
+import net.dongliu.apk.parser.parser.ApkMetaTranslator
+import net.dongliu.apk.parser.parser.BinaryXmlParser
+import net.dongliu.apk.parser.parser.CompositeXmlStreamer
+import net.dongliu.apk.parser.parser.ResourceTableParser
+import net.dongliu.apk.parser.parser.XmlTranslator
 import net.dongliu.apk.parser.struct.AndroidConstants
 import net.dongliu.apk.parser.struct.resource.ResourceTable
 import java.nio.ByteBuffer
 import java.util.Locale
 
 class ApkInfo(
-    val xmlTranslator: XmlTranslator,
-    val apkMetaTranslator: ApkMetaTranslator,
-    val apkType: ApkType,
-    val resourceTable: ResourceTable,
-    val allLocales: Set<Locale> = emptySet()
+        val xmlTranslator: XmlTranslator,
+        val apkMetaTranslator: ApkMetaTranslator,
+        val apkType: ApkType,
+        val resourceTable: ResourceTable,
+        val allLocales: Set<Locale> = emptySet()
 ) {
     enum class ApkType {
         SPLIT, BASE_OF_SPLIT_OR_STANDALONE, UNKNOWN
@@ -21,88 +25,79 @@ class ApkInfo(
 
         @Suppress("SameParameterValue")
         fun internalGetApkInfo(
-            preferredLocale: Locale?,
-            baseZipFilter: AbstractZipFilter,
-            extraZipFilters: List<AbstractZipFilter> = emptyList(),
-            requestParseManifestXmlTagForApkType: Boolean = false,
-            requestParseResources: Boolean = false,
-            masterResourceTable: ResourceTable? = null
+                preferredLocale: Locale?,
+                baseZipFilter: AbstractZipFilter,
+                extraZipFilters: List<AbstractZipFilter> = emptyList(),
+                requestParseManifestXmlTagForApkType: Boolean = false,
+                requestParseResources: Boolean = false,
+                masterResourceTable: ResourceTable? = null
         ): ApkInfo? {
             val mandatoryFilesToCheck = hashSetOf(AndroidConstants.MANIFEST_FILE)
             val extraFilesToCheck =
-                if (requestParseResources && masterResourceTable == null) hashSetOf(AndroidConstants.RESOURCE_FILE) else null
+                    if (requestParseResources && masterResourceTable == null) hashSetOf(AndroidConstants.RESOURCE_FILE) else null
             val byteArrayForEntries =
-                baseZipFilter.getByteArrayForEntries(mandatoryFilesToCheck, extraFilesToCheck)
-                    ?: return null
+                    baseZipFilter.getByteArrayForEntries(mandatoryFilesToCheck, extraFilesToCheck)
+                            ?: return null
             val manifestBytes: ByteArray = byteArrayForEntries[AndroidConstants.MANIFEST_FILE]
-                ?: return null
+                    ?: return null
             val resourcesBytes: ByteArray? = byteArrayForEntries[AndroidConstants.RESOURCE_FILE]
 
             val xmlTranslator = XmlTranslator()
             val allLocales = mutableSetOf<Locale>()
             val resourceTable: ResourceTable =
-                if (masterResourceTable != null) {
-                    allLocales.addAll(masterResourceTable.locales)
-                    masterResourceTable
-                } else {
-                    val table = if (resourcesBytes == null) {
-                        ResourceTable(null)
+                    if (masterResourceTable != null) {
+                        allLocales.addAll(masterResourceTable.locales)
+                        masterResourceTable
                     } else {
-                        val resourceTableParser = ResourceTableParser(ByteBuffer.wrap(resourcesBytes))
-                        resourceTableParser.parse()
-                        allLocales.addAll(resourceTableParser.locales)
-                        resourceTableParser.resourceTable
-                    }
-                    // Merge extra resource tables if requested
-                    if (requestParseResources) {
-                        for (extraFilter in extraZipFilters) {
-                            val extraBytes = extraFilter.getByteArrayForEntries(
-                                emptySet(),
-                                hashSetOf(AndroidConstants.RESOURCE_FILE)
-                            )?.get(AndroidConstants.RESOURCE_FILE)
-                            if (extraBytes != null) {
-                                try {
-                                    val extraParser = ResourceTableParser(ByteBuffer.wrap(extraBytes))
-                                    extraParser.parse()
+                        val table = if (resourcesBytes == null) {
+                            ResourceTable(null)
+                        } else {
+                            val resourceTableParser = ResourceTableParser(ByteBuffer.wrap(resourcesBytes))
+                            resourceTableParser.parse()
+                            allLocales.addAll(resourceTableParser.locales)
+                            resourceTableParser.resourceTable
+                        }
+                        // Merge extra resource tables if requested
+                        if (requestParseResources) {
+                            for (extraFilter in extraZipFilters) {
+                                val extraBytes = extraFilter.getByteArrayForEntries(
+                                        emptySet(),
+                                        hashSetOf(AndroidConstants.RESOURCE_FILE)
+                                )?.get(AndroidConstants.RESOURCE_FILE)
+                                if (extraBytes != null) {
+                                    try {
+                                        val extraParser = ResourceTableParser(ByteBuffer.wrap(extraBytes))
+                                        extraParser.parse()
 
-                                    // Merge all splits to ensure we have all translations for label/icon resolution.
-                                    val isRelevant = true
+                                        // Merge all splits to ensure we have all translations for label/icon resolution.
+                                        val isRelevant = true
 
-                                    if (isRelevant) {
-                                        allLocales.addAll(extraParser.locales)
-                                        table.merge(extraParser.resourceTable)
+                                        if (isRelevant) {
+                                            allLocales.addAll(extraParser.locales)
+                                            table.merge(extraParser.resourceTable)
+                                        }
+                                    } catch (ignored: Exception) {
                                     }
-                                } catch (ignored: Exception) {
                                 }
                             }
                         }
+                        table
                     }
-                    table
-                }
             val apkMetaTranslator = ApkMetaTranslator(resourceTable, preferredLocale)
             val binaryXmlParser = BinaryXmlParser(
-                ByteBuffer.wrap(manifestBytes), resourceTable,
-                CompositeXmlStreamer(xmlTranslator, apkMetaTranslator),
-                preferredLocale
+                    ByteBuffer.wrap(manifestBytes), resourceTable,
+                    CompositeXmlStreamer(xmlTranslator, apkMetaTranslator),
+                    preferredLocale
             )
             try {
                 binaryXmlParser.parse()
             } catch (e: Throwable) {
-                android.util.Log.e(
-                    "AppLog",
-                    "label fetching: error: CRITICAL error during binaryXmlParser.parse()",
-                    e
-                )
+                e.printStackTrace()
+//                android.util.Log.e("AppLog", "error: CRITICAL error during binaryXmlParser.parse()", e)
                 throw e
             }
             if (!requestParseManifestXmlTagForApkType) {
-                return ApkInfo(
-                    xmlTranslator,
-                    apkMetaTranslator,
-                    ApkType.UNKNOWN,
-                    resourceTable,
-                    allLocales
-                )
+                return ApkInfo(xmlTranslator, apkMetaTranslator, ApkType.UNKNOWN, resourceTable, allLocales)
             }
             val apkMeta = apkMetaTranslator.apkMeta
             val isSplitApk = !apkMeta.split.isNullOrEmpty()
@@ -113,11 +108,11 @@ class ApkInfo(
             val isDefinitelyBaseApkOfSplit = apkMeta.isSplitRequired
             if (isDefinitelyBaseApkOfSplit) {
                 return ApkInfo(
-                    xmlTranslator,
-                    apkMetaTranslator,
-                    ApkType.BASE_OF_SPLIT_OR_STANDALONE,
-                    resourceTable,
-                    allLocales
+                        xmlTranslator,
+                        apkMetaTranslator,
+                        ApkType.BASE_OF_SPLIT_OR_STANDALONE,
+                        resourceTable,
+                        allLocales
                 )
             }
             val manifestXml = xmlTranslator.xml
@@ -126,7 +121,7 @@ class ApkInfo(
                 val manifestXmlTag: XmlTag? = XmlTag.getXmlFromString(manifestXml)
                 manifestXmlTag?.let { tag ->
                     val requiredSplitTypesInManifestTag: String? =
-                        tag.tagAttributes?.get("android:requiredSplitTypes")
+                            tag.tagAttributes?.get("android:requiredSplitTypes")
                     if (!requiredSplitTypesInManifestTag.isNullOrEmpty()) {
                         apkType = ApkType.BASE_OF_SPLIT_OR_STANDALONE
                     }
@@ -142,14 +137,14 @@ class ApkInfo(
                         if (manifestXmlItem !is XmlTag || manifestXmlItem.tagName != "application")
                             return@forEach
                         val innerTagsAndContent = manifestXmlItem.innerTagsAndContent
-                            ?: return@forEach
+                                ?: return@forEach
                         for (applicationXmlItem: Any in innerTagsAndContent) {
                             if (applicationXmlItem !is XmlTag || applicationXmlItem.tagName != "meta-data")
                                 continue
                             val tagAttributes = applicationXmlItem.tagAttributes
-                                ?: continue
+                                    ?: continue
                             val attributeValueForName = tagAttributes["android:name"]
-                                ?: tagAttributes["name"] ?: continue
+                                    ?: tagAttributes["name"] ?: continue
                             when (attributeValueForName) {
                                 "com.android.vending.splits" -> {
                                     apkType = ApkType.BASE_OF_SPLIT_OR_STANDALONE
@@ -158,7 +153,7 @@ class ApkInfo(
 
                                 "instantapps.clients.allowed" -> {
                                     val value = tagAttributes["android:value"]
-                                        ?: tagAttributes["value"] ?: continue
+                                            ?: tagAttributes["value"] ?: continue
                                     if (value != "false") {
                                         apkType = ApkType.BASE_OF_SPLIT_OR_STANDALONE
                                         break
@@ -181,17 +176,17 @@ class ApkInfo(
         }
 
         fun getConsolidatedApkInfo(
-            preferredLocale: Locale?, filters: List<AbstractZipFilter>,
-            requestParseManifestXmlTagForApkType: Boolean = false,
-            requestParseResources: Boolean = false
+                preferredLocale: Locale?, filters: List<AbstractZipFilter>,
+                requestParseManifestXmlTagForApkType: Boolean = false,
+                requestParseResources: Boolean = false
         ): ApkInfo? {
             if (filters.isEmpty()) return null
             if (filters.size == 1) return internalGetApkInfo(
-                preferredLocale,
-                filters[0],
-                emptyList(),
-                requestParseManifestXmlTagForApkType,
-                requestParseResources
+                    preferredLocale,
+                    filters[0],
+                    emptyList(),
+                    requestParseManifestXmlTagForApkType,
+                    requestParseResources
             )
 
             var baseFilter: AbstractZipFilter? = null
@@ -199,14 +194,14 @@ class ApkInfo(
 
             for (filter in filters) {
                 val manifestBytes = filter.getByteArrayForEntries(hashSetOf(AndroidConstants.MANIFEST_FILE))
-                    ?.get(AndroidConstants.MANIFEST_FILE)
+                        ?.get(AndroidConstants.MANIFEST_FILE)
                 if (manifestBytes != null) {
                     val apkMetaTranslator = ApkMetaTranslator(ResourceTable(null), preferredLocale)
                     val binaryXmlParser = BinaryXmlParser(
-                        ByteBuffer.wrap(manifestBytes),
-                        ResourceTable(null),
-                        apkMetaTranslator,
-                        preferredLocale
+                            ByteBuffer.wrap(manifestBytes),
+                            ResourceTable(null),
+                            apkMetaTranslator,
+                            preferredLocale
                     )
                     try {
                         binaryXmlParser.parse()
@@ -228,11 +223,11 @@ class ApkInfo(
             }
 
             return internalGetApkInfo(
-                preferredLocale,
-                baseFilter,
-                extraFilters,
-                requestParseManifestXmlTagForApkType,
-                requestParseResources
+                    preferredLocale,
+                    baseFilter,
+                    extraFilters,
+                    requestParseManifestXmlTagForApkType,
+                    requestParseResources
             )
         }
     }

@@ -16,10 +16,10 @@
  */
 package net.dongliu.apk.parser.utils.xml;
 
+import androidx.annotation.NonNull;
+
 import java.io.IOException;
 import java.io.Writer;
-
-import androidx.annotation.NonNull;
 
 /**
  * Translates codepoints to their XML numeric entity escaped value.

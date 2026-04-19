@@ -1,27 +1,37 @@
 package com.lb.apkparserdemo.activities.activity_main
 
 import android.app.Application
-import android.content.pm.*
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
-import androidx.annotation.*
-import androidx.lifecycle.*
-import com.lb.apkparserdemo.apk_info.*
-import com.lb.apkparserdemo.apk_info.app_icon.*
+import androidx.annotation.UiThread
+import androidx.annotation.WorkerThread
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
+import com.lb.apkparserdemo.apk_info.AbstractZipFilter
+import com.lb.apkparserdemo.apk_info.ApacheZipArchiveInputStreamFilter
+import com.lb.apkparserdemo.apk_info.ApacheZipFileFilter
+import com.lb.apkparserdemo.apk_info.ApkInfo
+import com.lb.apkparserdemo.apk_info.MultiZipFilter
+import com.lb.apkparserdemo.apk_info.ZipFileFilter
+import com.lb.apkparserdemo.apk_info.ZipInputStreamFilter
+import com.lb.apkparserdemo.apk_info.app_icon.ApkIconFetcher
+import com.lb.apkparserdemo.apk_info.app_icon.AppInfoUtil
+import com.lb.apkparserdemo.apk_info.app_icon.getInstalledPackagesCompat
+import com.lb.apkparserdemo.apk_info.app_icon.isSystemApp
 import com.lb.common_utils.BaseViewModel
-import kotlinx.coroutines.*
-import net.dongliu.apk.parser.parser.ResourceTableParser
-import net.dongliu.apk.parser.struct.AndroidConstants
-import net.dongliu.apk.parser.struct.resource.ResourceTable
-import net.dongliu.apk.parser.utils.Locales
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runInterruptible
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream
 import java.io.FileInputStream
-import java.nio.ByteBuffer
 import java.util.Locale
 import java.util.concurrent.Executors
-import java.util.zip.*
+import java.util.zip.ZipFile
+import java.util.zip.ZipInputStream
 
 private const val VALIDATE_RESOURCES = true
 private const val GET_APK_TYPE = true
@@ -167,7 +177,6 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                 if (isSystemApp) systemAppsErrorsCountLiveData.inc()
                 Log.e("AppLog", "apk package name is different for $baseApkPath : " + "correct one is: \"${packageInfo.packageName}\" vs found: \"${apkMeta.packageName}\" isSystemApp?$isSystemApp")
             }
-            val apkMetaTranslator = currentApkInfo.apkMetaTranslator
             //compare version name using library vs framework
             if (VALIDATE_RESOURCES && packageInfo.versionName != apkMeta.versionName) {
                 wrongVersionNameErrorsLiveData.inc()
@@ -186,24 +195,10 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             val labelOfLibrary = apkMeta.label ?: apkMeta.packageName
             if (VALIDATE_RESOURCES) {
                 val expectedAppLabel = packageInfo.applicationInfo!!.loadLabel(packageManager)
-                if (packageName == "com.google.android.cellbroadcastreceiver") {
-                    //check for a specific app, of its label translations:
-                    val allLabels = apkMetaTranslator.getAllLabels()
-                    val enCaLabel = allLabels[Locale("EN", "CA")]
-                    Log.d("AppLog", "label fetching: library label for en-CA is \"$enCaLabel\"")
-//                    val enGbLabel= allLabels[Locale("EN", "GB")]
-//                    Log.d("AppLog", "label fetching: library label for en-GB is \"$enGbLabel\"")
-                }
                 if (expectedAppLabel != labelOfLibrary.toString()) {
                     wrongLabelErrorsLiveData.inc()
                     if (isSystemApp) systemAppsErrorsCountLiveData.inc()
-                    val allLibraryLabels = apkMetaTranslator.getAllLabels()
-                    Log.e("AppLog", "label fetching: mismatch for \"${packageName}\": correct=\"$expectedAppLabel\" vs found=\"$labelOfLibrary\" apks:${allApkFilePaths.joinToString()}")
-                    Log.e("AppLog", "label fetching: All library translations for \"$packageName\" (${allLibraryLabels.size}): $allLibraryLabels")
-                    Log.e("AppLog", "label fetching: System locale list: $localeList. APK all locales: ${currentApkInfo.allLocales}")
-                    packageInfo.applicationInfo?.let { appInfo ->
-                        Log.e("AppLog", "label fetching: Framework appInfo nonLocalizedLabel: ${appInfo.nonLocalizedLabel}, labelRes: 0x${Integer.toHexString(appInfo.labelRes)}")
-                    }
+                    Log.e("AppLog", "label mismatch for \"${packageName}\": correct=\"$expectedAppLabel\" vs found=\"$labelOfLibrary\" apks:${allApkFilePaths.joinToString()}")
                 }
             }
             apkFilesHandledLiveData.inc()

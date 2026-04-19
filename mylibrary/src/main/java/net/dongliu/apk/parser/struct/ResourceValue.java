@@ -219,32 +219,7 @@ public abstract class ResourceValue {
 
             // Recurse to get the value of the selected entry
             if (selectedResource != null) {
-                String result = selectedResource.resourceEntry.toStringValue(resourceTable, locale);
-
-                // Logging and filtering for app label identification
-                if (selectedResource.typeSpec.name.equals("string")) {
-                    long id = resourceId;
-                    if (id == 0x7f120024 || id == 0x7f12014f || id == 0x7f12001e) {
-                        StringBuilder sb = new StringBuilder();
-                        sb.append("label fetching: ID 0x").append(Long.toHexString(id))
-                                .append(" recursed to result: ").append(result)
-                                .append(" locale:").append(selectedResource.type.locale)
-                                .append(" config:").append(selectedResource.type.config)
-                                .append(" stack:\n");
-                        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-                        for (int i = 2; i < Math.min(stackTrace.length, 12); i++) {
-                            sb.append("\tat ").append(stackTrace[i].toString()).append("\n");
-                        }
-                        android.util.Log.d("AppLog", sb.toString());
-
-                        // Log all candidates for this important ID to see selection logic in action
-                        for (final ResourceTable.Resource res : resources) {
-                            int s = Locales.match(locale, res.type.locale);
-                            android.util.Log.d("AppLog", "label fetching: candidate for 0x" + Long.toHexString(id) + ": locale=" + res.type.locale + " config=" + res.type.config + " score=" + s + " entry=" + res.resourceEntry);
-                        }
-                    }
-                }
-                return result;
+                return selectedResource.resourceEntry.toStringValue(resourceTable, locale);
             }
             return null;
         }
