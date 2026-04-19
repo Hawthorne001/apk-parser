@@ -200,7 +200,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                 }
 
                 // Mirror framework's nonLocalizedLabel (hardcoded string in manifest)
-                val nonLocalizedLabelOfLibrary = currentApkInfo.apkMetaTranslator.getNonLocalizedLabel()
+                val nonLocalizedLabelOfLibrary = currentApkInfo.apkMetaTranslator.nonLocalizedLabel
                 val nonLocalizedLabelOfFramework = packageInfo.applicationInfo?.nonLocalizedLabel?.toString()
                 if (nonLocalizedLabelOfFramework != nonLocalizedLabelOfLibrary) {
                     Log.e("AppLog", "nonLocalizedLabel mismatch for \"$packageName\": framework=\"$nonLocalizedLabelOfFramework\" library=\"$nonLocalizedLabelOfLibrary\"")
