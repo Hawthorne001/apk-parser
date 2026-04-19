@@ -3,65 +3,70 @@ package net.dongliu.apk.parser.utils
 import java.util.Locale
 
 /**
- * @author dongliu
+ * Mimics Android's Resource resolution logic for Locales.
  */
 object Locales {
-    /**
-     * when do localize, any locale will match this
-     */
-    @JvmField
-    val any = Locale("", "")
+    const val PERFECT_SCORE = Integer.MAX_VALUE
 
     /**
-     * How much the given locale match the expected locale.
-     * Returns a score:
-     * 100: Exact match (Language + Country)
-     * 90: Exact match (Language only, both empty country)
-     * 70: Language match, but target has empty country (parent match)
-     * 0: No match (or default configuration, which is handled by Step 2 fallback to null)
+     * Scores a candidate locale against the desired device locale.
+     * Higher is better.
+     * 0 means completely incompatible.
      */
     @JvmStatic
-    fun match(locale: Locale?, targetLocale: Locale): Int {
-        if (locale == null) {
-            // If no locale provided, only match the default (empty) configuration
-            return if (targetLocale.language.isEmpty()) 10 else 0
+    fun match(deviceLocale: Locale?, candidate: Locale): Int {
+        // Default/Empty configuration is the lowest possible positive match
+        if (candidate.language.isEmpty()) {
+            return 1
         }
-        
-        val lang1 = normalizeLanguage(locale.language)
-        val lang2 = normalizeLanguage(targetLocale.language)
-        
-        if (lang1 != lang2) {
+        val candidateLanguage = normalizeLanguage(candidate.language)
+        // 1. Handle Null Device Locale
+        if (deviceLocale == null) {
+            // Only the empty/default configuration is a valid match if no locale requested
+            return if (candidateLanguage.isEmpty()) 1 else 0
+        }
+        val deviceLanguage = normalizeLanguage(deviceLocale.language)
+        if (deviceLanguage != candidateLanguage)
             return 0
+        val deviceCountry = deviceLocale.country
+        val candidateCountry = candidate.country
+        // 1. Perfect Match
+        if (deviceCountry == candidateCountry && !deviceCountry.isEmpty())
+            return PERFECT_SCORE
+        // 2. Language-only match (e.g., candidate is 'en')
+        if (candidateCountry.isEmpty())
+            return 50
+        // 3. Representative Fallback Match (The en-GB / en-US logic)
+        // Android uses an internal table. en-GB is the representative for many
+        // International English regions (like IL, AU, etc.)
+        if (isRepresentativeMatch(deviceLanguage, deviceCountry, candidateCountry)) {
+            return 40
         }
-
-        // Language matches. Now check country.
-        val country1 = locale.country
-        val country2 = targetLocale.country
-
-        // Pseudolocale check: ignore them
-        if (country2 == "XA" || country2 == "XB") {
-            return 0
-        }
-
-        if (country1 == country2) {
-            // Both are empty OR both are same country
-            return if (country1.isEmpty()) 90 else 100
-        }
-        
-        if (country2.isEmpty()) {
-            // Target is a parent (language-only). This is a good match for any country in same language.
-            return 70
-        }
-
-        // Country mismatch (e.g., en_US vs en_GB). User wants fallback to DEFAULT in this case.
+        // 4. Siblings (en-US vs en-GB) - Android usually prefers Default over a mismatched country
+        // unless it's a representative.
         return 0
     }
 
-    @JvmStatic
-    fun isParent(target: Locale, candidate: Locale): Boolean {
-        if (candidate.language.isEmpty()) return true
-        if (normalizeLanguage(candidate.language) != normalizeLanguage(target.language)) return false
-        return candidate.country.isEmpty() || candidate.country == target.country
+    /**
+     * Simplified version of Android's representative table.
+     */
+    private fun isRepresentativeMatch(lang: String, deviceCountry: String, candidateCountry: String): Boolean {
+        if (lang == "en") {
+            // en-GB is the representative for most of the world except North America
+            val britishRegions = setOf("IL", "GB", "AU", "NZ", "IE", "ZA", "IN", "HK", "MT", "SG")
+            if (candidateCountry == "GB" && britishRegions.contains(deviceCountry)) return true
+
+            // en-US is the representative for Americas
+            val americanRegions = setOf("US", "CA", "PH", "LR")
+            if (candidateCountry == "US" && americanRegions.contains(deviceCountry)) return true
+        }
+
+        if (lang == "zh") {
+            // zh-HK and zh-MO often fallback to zh-TW (Traditional)
+            if (candidateCountry == "TW" && (deviceCountry == "HK" || deviceCountry == "MO")) return true
+        }
+
+        return false
     }
 
     @JvmStatic
@@ -70,7 +75,7 @@ object Locales {
             "iw" -> "he"
             "in" -> "id"
             "ji" -> "yi"
-            else -> language
+            else -> language.lowercase()
         }
     }
 }

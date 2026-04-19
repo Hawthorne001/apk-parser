@@ -6,7 +6,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import net.dongliu.apk.parser.struct.resource.Densities;
-import net.dongliu.apk.parser.struct.resource.ResourceEntry;
 import net.dongliu.apk.parser.struct.resource.ResourceTable;
 import net.dongliu.apk.parser.struct.xml.Attribute;
 import net.dongliu.apk.parser.utils.Locales;
@@ -141,9 +140,9 @@ public abstract class ResourceValue {
         public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
             if (this.value >= 0) {
                 String result = this.stringPool.get(this.value);
-                if (result == null) {
-                    android.util.Log.d("AppLog", "label fetching: StringPool returned null for index 0x" + Integer.toHexString(this.value) + " (pool length: " + stringPool.length() + ")");
-                }
+//                if (result == null) {
+//                    android.util.Log.d("AppLog", "label fetching: StringPool returned null for index 0x" + Integer.toHexString(this.value) + " (pool length: " + stringPool.length() + ")");
+//                }
                 return result;
             } else {
                 return null;
@@ -188,34 +187,33 @@ public abstract class ResourceValue {
                 if ((resourceId >> 24) == 0x01) {
                     return raw;
                 }
-                android.util.Log.d("AppLog", "label fetching: getResourcesById(0x" + Long.toHexString(resourceId) + ") returned NOTHING");
+//                android.util.Log.d("AppLog", "label fetching: getResourcesById(0x" + Long.toHexString(resourceId) + ") returned NOTHING");
                 return null;
             }
 
-            ResourceEntry selected = null;
+            ResourceTable.Resource  selected = null;
             int currentMaxScore = -1;
             int currentDensityLevel = -1;
-
             // Search for the best locale match
             for (final ResourceTable.Resource resource : resources) {
                 final int matchScore = Locales.match(locale, resource.type.locale);
                 final int densityLevel = ReferenceResourceValue.densityLevel(resource.type.density);
-                Log.d("AppLog", "label fetching: inspection of resource locale for now: " + resource.type.locale + " score:" + matchScore + " value:"+resource.resourceEntry.toStringValue(resourceTable, locale));
+//                Log.d("AppLog", "label fetching: inspection of resource locale for now: " + resource.type.locale + " score:" + matchScore + " value:"+resource.resourceEntry.toStringValue(resourceTable, locale));
                 if (matchScore > currentMaxScore) {
-//                    Log.d("AppLog", "label fetching: selected locale for now: "+resource.type.locale+" score:"+matchScore);
-                    selected = resource.resourceEntry;
+                    Log.d("AppLog", "label fetching: selected locale for now: " + resource.type.locale + " score:" + matchScore+" value:"+resource.resourceEntry.toStringValue(resourceTable, locale));
+                    selected = resource;
                     currentMaxScore = matchScore;
                     currentDensityLevel = densityLevel;
                 } else if (matchScore > 0 && matchScore == currentMaxScore && densityLevel > currentDensityLevel) {
-                    selected = resource.resourceEntry;
+                    selected = resource;
                     currentDensityLevel = densityLevel;
                 }
             }
 
             // Recurse to get the value of the selected entry
             if (selected != null) {
-                String result = selected.toStringValue(resourceTable, locale);
-                android.util.Log.d("AppLog", "label fetching: ID 0x" + Long.toHexString(resourceId) + " recursed to result: " + result);
+                String result = selected.resourceEntry.toStringValue(resourceTable, locale);
+                android.util.Log.d("AppLog", "label fetching: ID 0x" + Long.toHexString(resourceId) + " recursed to result: " + result + " locale:" +  selected.type.locale);
                 return result;
             }
             return null;

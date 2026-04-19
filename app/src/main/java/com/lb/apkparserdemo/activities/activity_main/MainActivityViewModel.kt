@@ -69,6 +69,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         } else {
             listOf(Locale.getDefault())
         }
+//        Locales.matcher=SystemLocaleMatcher()
         val mainLocale = localeList.firstOrNull()
         val context = applicationContext
         val appIconSize = AppInfoUtil.getAppIconSize(context)
@@ -80,8 +81,8 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
 //                    it.add("com.android.wallpaper")
 //                    it.add("com.google.android.apps.setupwizard.searchselector")
 //                    it.add("com.google.android.odad")
-//                    it.add("com.google.android.cellbroadcastreceiver")
-                    it.add("com.google.android.apps.pixel.dcservice")
+                    it.add("com.google.android.cellbroadcastreceiver")
+//                    it.add("com.google.android.apps.pixel.dcservice")
 //                    it.add("com.google.android.photopicker")
 //                    it.add("com.google.android.storagemanager")
 
@@ -130,7 +131,6 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                 Log.e("AppLog", "can't parse apk for \"$packageName\" in: \"$baseApkPath\" isSystemApp?$isSystemApp")
                 continue
             }
-
             val currentApkInfo = apkInfo!!
             if (VALIDATE_RESOURCES) {
                 //check if the library can get app icon, if required

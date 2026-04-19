@@ -70,7 +70,7 @@ public class ResourceTableParser {
         this.stringPool = stringPool;
         this.resourceTable = new ResourceTable(stringPool);
         final long packageCount = resourceTableHeader.getPackageCount();
-        android.util.Log.d("AppLog", "label fetching: packageCount in resources.arsc: " + packageCount);
+//        android.util.Log.d("AppLog", "label fetching: packageCount in resources.arsc: " + packageCount);
         if (packageCount != 0) {
             PackageHeader packageHeader = (PackageHeader) this.readChunkHeader();
             for (int i = 0; i < packageCount; i++) {
@@ -173,10 +173,10 @@ public class ResourceTableParser {
                     for (long i = 0; i < libraryHeader.getCount(); i++) {
                         final int packageId = this.buffer.getInt();
                         final String name = Buffers.readZeroTerminatedString(this.buffer, 128);
-                        android.util.Log.d("AppLog", "label fetching: in package 0x" + Integer.toHexString(resourcePackage.getId()) + " (" + resourcePackage.getName() + "), found library mapping: 0x" + Integer.toHexString(packageId) + " -> " + name);
+//                        android.util.Log.d("AppLog", "label fetching: in package 0x" + Integer.toHexString(resourcePackage.getId()) + " (" + resourcePackage.getName() + "), found library mapping: 0x" + Integer.toHexString(packageId) + " -> " + name);
                         this.resourceTable.addLibraryMapping(packageId, name);
                         if (name.equals(resourcePackage.getName())) {
-                            android.util.Log.d("AppLog", "label fetching: remapping package " + name + " to ID 0x" + Integer.toHexString(packageId));
+//                            android.util.Log.d("AppLog", "label fetching: remapping package " + name + " to ID 0x" + Integer.toHexString(packageId));
                             resourcePackage.setId((short) packageId);
                         }
                     }
@@ -199,7 +199,7 @@ public class ResourceTableParser {
                     throw new ParserException("unexpected chunk type: 0x" + (int) chunkHeader.chunkType);
             }
         }
-        android.util.Log.d("AppLog", "label fetching: finished reading package " + resourcePackage.getName() + ". typeSpecs: " + resourcePackage.getTypeSpecMap().size() + ", types: " + resourcePackage.getTypesMap().size());
+//        android.util.Log.d("AppLog", "label fetching: finished reading package " + resourcePackage.getName() + ". typeSpecs: " + resourcePackage.getTypeSpecMap().size() + ", types: " + resourcePackage.getTypesMap().size());
         return pair;
 
     }

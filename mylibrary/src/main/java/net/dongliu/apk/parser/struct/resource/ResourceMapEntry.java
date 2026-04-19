@@ -40,7 +40,7 @@ public class ResourceMapEntry extends ResourceEntry {
     @Override
     public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
         if (this.parent != 0 && resourceTable != null) {
-            android.util.Log.d("AppLog", "label fetching: ResourceMapEntry " + this.key + " follows parent alias 0x" + Long.toHexString(this.parent));
+//            android.util.Log.d("AppLog", "label fetching: ResourceMapEntry " + this.key + " follows parent alias 0x" + Long.toHexString(this.parent));
             String resolvedParent = ResourceValue.reference((int) this.parent).toStringValue(resourceTable, locale);
             if (resolvedParent != null && !resolvedParent.startsWith("resourceId:0x")) {
                 return resolvedParent;
