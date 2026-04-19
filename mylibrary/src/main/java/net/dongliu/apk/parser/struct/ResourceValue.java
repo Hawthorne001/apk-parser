@@ -230,7 +230,7 @@ public abstract class ResourceValue {
 
                 // Logging and filtering for app label identification
                 if (selectedResource.typeSpec.name.equals("string")) {
-                    android.util.Log.d("AppLog", "label fetching: ID 0x" + Long.toHexString(resourceId) + " recursed to result: " + result + " locale:" +  selectedResource.type.locale);
+//                    android.util.Log.d("AppLog", "label fetching: ID 0x" + Long.toHexString(resourceId) + " recursed to result: " + result + " locale:" +  selectedResource.type.locale);
 
                     long id = resourceId;
                     if (id == 0x7f120024 || id == 0x7f12014f || id == 0x7f12001e) {

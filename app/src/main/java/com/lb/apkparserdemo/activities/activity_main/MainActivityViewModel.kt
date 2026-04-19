@@ -191,6 +191,8 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                     val allLabels = apkMetaTranslator.getAllLabels()
                     val enCaLabel = allLabels[Locale("EN", "CA")]
                     Log.d("AppLog", "label fetching: library label for en-CA is \"$enCaLabel\"")
+//                    val enGbLabel= allLabels[Locale("EN", "GB")]
+//                    Log.d("AppLog", "label fetching: library label for en-GB is \"$enGbLabel\"")
                 }
                 if (expectedAppLabel != labelOfLibrary.toString()) {
                     wrongLabelErrorsLiveData.inc()
