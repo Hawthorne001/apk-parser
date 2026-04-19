@@ -10,8 +10,8 @@ object Locales {
     const val PERFECT_SCORE = Integer.MAX_VALUE
 
     private fun isPseudoLocale(locale: Locale): Boolean {
-        return (locale.language == "en" && locale.country == "XA") ||
-                (locale.language == "ar" && locale.country == "XB")
+        return ((locale.language == "en" && locale.country == "XA") ||
+                (locale.language == "ar" && locale.country == "XB"))
     }
 
     /**
@@ -28,7 +28,7 @@ object Locales {
 
         // Default/Empty configuration is the lowest possible positive match
         // BUT it must be better than a non-representative sibling.
-        // Sibling = 5, Default = 10, Representative = 40, Language Match = 50, Perfect = MAX
+        // Sibling = 5, Default = 10, Language Match = 30, Secondary Rep = 40, Primary Rep = 45, Perfect = MAX
         if (candidate.language.isEmpty()) {
             return 10
         }
@@ -49,7 +49,7 @@ object Locales {
         }
 
         // 3. Script matching
-        val deviceScript = if (deviceLocale != null) getScript(deviceLocale) else ""
+        val deviceScript = deviceLocale?.let { getScript(it) } ?: ""
         val candidateScript = getScript(candidate)
         if (deviceScript != candidateScript && deviceScript.isNotEmpty() && candidateScript.isNotEmpty()) {
             return 0
@@ -62,12 +62,15 @@ object Locales {
 
         // 4. Candidate has no country (general language match)
         if (candidateCountry.isEmpty()) {
-            return 50
+            return 30
         }
 
-        // 5. Representative Fallback Match (e.g., en-GB for en-AU)
-        if (deviceLocale != null && isRepresentativeMatch(deviceLanguage, deviceCountry, candidateCountry)) {
-            return 40
+        // 5. Representative Fallback Match (e.g., en-GB for en-AU, or en-US for en-IL)
+        if (deviceLocale != null) {
+            val repScore = getRepresentativeScore(deviceLanguage, deviceCountry, candidateCountry)
+            if (repScore > 0) {
+                return repScore
+            }
         }
 
         // 6. Sibling (same language, different country, neither is a representative)
@@ -87,23 +90,27 @@ object Locales {
     /**
      * Simplified version of Android's representative table.
      */
-    private fun isRepresentativeMatch(lang: String, deviceCountry: String, candidateCountry: String): Boolean {
+    private fun getRepresentativeScore(lang: String, deviceCountry: String, candidateCountry: String): Int {
         if (lang == "en") {
-            // en-GB is the representative for most of the world except North America
+            // en-GB is the primary representative for most of the world except Americas
             val britishRegions = setOf("IL", "GB", "AU", "NZ", "IE", "ZA", "IN", "HK", "MT", "SG")
-            if (candidateCountry == "GB" && britishRegions.contains(deviceCountry)) return true
+            if (candidateCountry == "GB" && britishRegions.contains(deviceCountry)) return 45
 
-            // en-US is the representative for Americas
+            // en-US is the primary representative for Americas
             val americanRegions = setOf("US", "CA", "PH", "LR")
-            if (candidateCountry == "US" && americanRegions.contains(deviceCountry)) return true
+            if (candidateCountry == "US") {
+                if (americanRegions.contains(deviceCountry)) return 45
+                // en-US acts as a secondary/global representative for other en regions (like IL)
+                return 40
+            }
         }
 
         if (lang == "zh") {
             // zh-HK and zh-MO often fallback to zh-TW (Traditional)
-            if (candidateCountry == "TW" && (deviceCountry == "HK" || deviceCountry == "MO")) return true
+            if (candidateCountry == "TW" && (deviceCountry == "HK" || deviceCountry == "MO")) return 45
         }
 
-        return false
+        return 0
     }
 
     @JvmStatic
