@@ -17,13 +17,13 @@
 package net.dongliu.apk.parser.cert.asn1.ber;
 
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 /**
  * {@link BerDataValueReader} which reads from an {@link InputStream} returning BER-encoded data

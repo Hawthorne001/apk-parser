@@ -2,8 +2,11 @@ package com.lb.apkparserdemo.apk_info.app_icon
 
 import android.app.ActivityManager
 import android.content.Context
-import android.content.pm.*
-import android.os.Build.*
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
+import android.os.Build.VERSION
+import android.os.Build.VERSION_CODES
 import androidx.core.content.getSystemService
 
 fun ApplicationInfo.isSystemApp() = this.flags and ApplicationInfo.FLAG_SYSTEM != 0

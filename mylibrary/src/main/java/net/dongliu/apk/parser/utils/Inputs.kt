@@ -1,6 +1,8 @@
 package net.dongliu.apk.parser.utils
 
-import java.io.*
+import java.io.ByteArrayOutputStream
+import java.io.IOException
+import java.io.InputStream
 
 object Inputs {
     @JvmStatic

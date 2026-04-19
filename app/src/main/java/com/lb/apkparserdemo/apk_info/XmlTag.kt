@@ -1,9 +1,10 @@
 package com.lb.apkparserdemo.apk_info
 
 import android.content.Context
-import org.xmlpull.v1.*
+import org.xmlpull.v1.XmlPullParser
+import org.xmlpull.v1.XmlPullParserFactory
 import java.io.StringReader
-import java.util.*
+import java.util.Stack
 
 /**
  * an xml tag , includes its name, value and attributes

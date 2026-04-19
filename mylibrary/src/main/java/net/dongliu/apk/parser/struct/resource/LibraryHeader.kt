@@ -1,6 +1,7 @@
 package net.dongliu.apk.parser.struct.resource
 
-import net.dongliu.apk.parser.struct.*
+import net.dongliu.apk.parser.struct.ChunkHeader
+import net.dongliu.apk.parser.struct.ChunkType
 import net.dongliu.apk.parser.utils.Buffers
 import net.dongliu.apk.parser.utils.Unsigned.ensureUInt
 import java.nio.ByteBuffer

@@ -3,7 +3,6 @@ package net.dongliu.apk.parser.parser;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import net.dongliu.apk.parser.struct.xml.Attribute;
 import net.dongliu.apk.parser.struct.xml.Attributes;
 import net.dongliu.apk.parser.struct.xml.XmlCData;
 import net.dongliu.apk.parser.struct.xml.XmlNamespaceEndTag;

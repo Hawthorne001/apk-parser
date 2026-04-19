@@ -1,6 +1,7 @@
 package net.dongliu.apk.parser.parser
 
-import net.dongliu.apk.parser.struct.xml.*
+import net.dongliu.apk.parser.struct.xml.XmlNamespaceEndTag
+import net.dongliu.apk.parser.struct.xml.XmlNamespaceStartTag
 
 /**
  * the xml file's namespaces.

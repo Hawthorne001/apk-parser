@@ -2,7 +2,7 @@ package com.lb.apkparserdemo.apk_info
 
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
 import java.io.Closeable
-import java.util.*
+import java.util.Enumeration
 
 /**Note seems to perform worse than the built in one of Android. Use only if the built in one has some issues*/
 class ApacheZipFileFilter(private val zipFile: org.apache.commons.compress.archivers.zip.ZipFile) :

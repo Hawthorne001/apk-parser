@@ -1,6 +1,7 @@
 package net.dongliu.apk.parser.struct
 
-import net.dongliu.apk.parser.utils.*
+import net.dongliu.apk.parser.utils.Buffers
+import net.dongliu.apk.parser.utils.Unsigned
 import java.nio.ByteBuffer
 
 /**

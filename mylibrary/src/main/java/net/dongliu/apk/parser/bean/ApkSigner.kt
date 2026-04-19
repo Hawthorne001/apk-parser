@@ -1,7 +1,5 @@
 package net.dongliu.apk.parser.bean
 
-import net.dongliu.apk.parser.bean.CertificateMeta
-
 /**
  * ApkSignV1 certificate file.
  */
