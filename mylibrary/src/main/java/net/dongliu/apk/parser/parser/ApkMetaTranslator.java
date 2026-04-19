@@ -52,6 +52,9 @@ public class ApkMetaTranslator implements XmlStreamer {
         this.allLocales = allLocales;
     }
 
+    private String resolvedLabel;
+    private Locale resolvedLabelLocale;
+
     @Override
     public void onStartTag(final @NonNull XmlNodeStartTag xmlNodeStartTag) {
         final Attributes attributes = xmlNodeStartTag.attributes;
@@ -78,17 +81,18 @@ public class ApkMetaTranslator implements XmlStreamer {
                         this.labelResId = ((net.dongliu.apk.parser.struct.ResourceValue.ReferenceResourceValue) labelAttr.typedValue).getReferenceResourceId();
                     }
                     
-                    // Step 1: Try matched locale
-                    label = labelAttr.toStringValue(this.resourceTable, this.locale);
-                    
-                    if (label == null || label.startsWith("resourceId:0x")) {
-                         // Step 2: Try default APK locale
-                         label = labelAttr.toStringValue(this.resourceTable, (Locale) null);
+                    // Step 1: Use already resolved value if available, else try matched locale
+                    label = labelAttr.value;
+                    if (label == null) {
+                        label = labelAttr.toStringValue(this.resourceTable, this.locale);
                     }
-                    
+                    this.resolvedLabel = label;
+                    this.resolvedLabelLocale = this.locale;
+
                     if (label != null && label.startsWith("resourceId:0x")) {
                         // Resolution failed or just returned ID
                         label = null;
+                        this.resolvedLabel = null;
                     }
                 }
 
@@ -248,7 +252,7 @@ public class ApkMetaTranslator implements XmlStreamer {
         List<ResourceTable.Resource> resources = this.resourceTable.getResourcesById(this.labelResId);
         java.util.Map<Locale, String> map = new java.util.HashMap<>();
         for (ResourceTable.Resource resource : resources) {
-            String value = resource.resourceEntry.toStringValue(this.resourceTable, (Locale) null);
+            String value = resource.resourceEntry.toStringValue(this.resourceTable, resource.type.locale);
             if (value != null && !value.startsWith("resourceId:0x")) {
                 map.put(resource.type.locale, value);
             }
@@ -261,6 +265,9 @@ public class ApkMetaTranslator implements XmlStreamer {
         if (this.labelResId == 0) {
             String label = this.apkMetaBuilder.getLabel();
             return label != null ? label : "";
+        }
+        if (locale != null && locale.equals(this.resolvedLabelLocale) && this.resolvedLabel != null) {
+            return this.resolvedLabel;
         }
         String label = ResourceValue.reference((int) this.labelResId).toStringValue(this.resourceTable, locale);
         if (label != null && !label.startsWith("resourceId:0x")) {

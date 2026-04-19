@@ -146,43 +146,48 @@ public class ParseUtils {
         final int size = Buffers.readUShort(buffer);
         final short res0 = Buffers.readUByte(buffer);
         final short dataType = Buffers.readUByte(buffer);
+        int data = buffer.getInt();
+        return createResourceValue(dataType, data, stringPool);
+    }
+
+    @Nullable
+    public static ResourceValue createResourceValue(int dataType, int data, StringPool stringPool) {
         switch (dataType) {
             case ResValue.ResType.INT_DEC:
-                return ResourceValue.decimal(buffer.getInt());
+                return ResourceValue.decimal(data);
             case ResValue.ResType.INT_HEX:
-                return ResourceValue.hexadecimal(buffer.getInt());
+                return ResourceValue.hexadecimal(data);
             case ResValue.ResType.STRING:
-                final int strRef = buffer.getInt();
-                if (strRef >= 0) {
-                    return ResourceValue.string(strRef, stringPool);
+                if (data >= 0) {
+                    return ResourceValue.string(data, stringPool);
                 } else {
                     return null;
                 }
             case ResValue.ResType.REFERENCE:
             case ResValue.ResType.TYPE_DYNAMIC_REFERENCE:
-                return ResourceValue.reference(buffer.getInt());
+                return ResourceValue.reference(data);
             case ResValue.ResType.ATTRIBUTE:
-                return ResourceValue.attribute(buffer.getInt());
+                return ResourceValue.attribute(data);
             case ResValue.ResType.FLOAT:
-                return ResourceValue.floatValue(buffer.getInt());
+                return ResourceValue.floatValue(data);
             case ResValue.ResType.INT_BOOLEAN:
-                return ResourceValue.bool(buffer.getInt());
+                return ResourceValue.bool(data);
             case ResValue.ResType.NULL:
                 return ResourceValue.nullValue();
             case ResValue.ResType.INT_COLOR_RGB8:
-                return ResourceValue.rgb(buffer.getInt(), 6);
+                return ResourceValue.rgb(data, 6);
             case ResValue.ResType.INT_COLOR_RGB4:
-                return ResourceValue.rgb(buffer.getInt(), 3);
+                return ResourceValue.rgb(data, 3);
             case ResValue.ResType.INT_COLOR_ARGB8:
-                return ResourceValue.rgb(buffer.getInt(), 8);
+                return ResourceValue.rgb(data, 8);
             case ResValue.ResType.INT_COLOR_ARGB4:
-                return ResourceValue.rgb(buffer.getInt(), 4);
+                return ResourceValue.rgb(data, 4);
             case ResValue.ResType.DIMENSION:
-                return ResourceValue.dimension(buffer.getInt());
+                return ResourceValue.dimension(data);
             case ResValue.ResType.FRACTION:
-                return ResourceValue.fraction(buffer.getInt());
+                return ResourceValue.fraction(data);
             default:
-                return ResourceValue.raw(buffer.getInt(), dataType);
+                return ResourceValue.raw(data, (short) dataType);
         }
     }
 

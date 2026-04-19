@@ -131,7 +131,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                 Log.e("AppLog", "can't parse apk for \"$packageName\" in: \"$baseApkPath\" isSystemApp?$isSystemApp")
                 continue
             }
-            val currentApkInfo = apkInfo!!
+            val currentApkInfo = apkInfo
             if (VALIDATE_RESOURCES) {
                 //check if the library can get app icon, if required
                 val appIcon = ApkIconFetcher.getApkIcon(
@@ -186,13 +186,18 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             val labelOfLibrary = apkMeta.label ?: apkMeta.packageName
             if (VALIDATE_RESOURCES) {
                 val expectedAppLabel = packageInfo.applicationInfo!!.loadLabel(packageManager)
-
+//                if (packageName == "com.google.android.cellbroadcastreceiver") {
+//                    //check for a specific app, of its label translations:
+//                    val allLabels = apkMetaTranslator.getAllLabels()
+//                    val enCaLabel= allLabels[Locale("EN","CA")]
+//                    Log.d("AppLog", "label fetching: label in en-CA is \"$enCaLabel\"")
+//                }
                 if (expectedAppLabel != labelOfLibrary.toString()) {
                     wrongLabelErrorsLiveData.inc()
                     if (isSystemApp) systemAppsErrorsCountLiveData.inc()
                     val allLibraryLabels = apkMetaTranslator.getAllLabels()
                     Log.e("AppLog", "label fetching: mismatch for \"${packageName}\": correct=\"$expectedAppLabel\" vs found=\"$labelOfLibrary\" apks:${allApkFilePaths.joinToString()}")
-                    Log.e("AppLog", "label fetching: All library translations for \"$packageName\": $allLibraryLabels")
+                    Log.e("AppLog", "label fetching: All library translations for \"$packageName\" (${allLibraryLabels.size}): $allLibraryLabels")
                     Log.e("AppLog", "label fetching: System locale list: $localeList. APK all locales: ${currentApkInfo.allLocales}")
                     packageInfo.applicationInfo?.let { appInfo ->
                         Log.e("AppLog", "label fetching: Framework appInfo nonLocalizedLabel: ${appInfo.nonLocalizedLabel}, labelRes: 0x${Integer.toHexString(appInfo.labelRes)}")

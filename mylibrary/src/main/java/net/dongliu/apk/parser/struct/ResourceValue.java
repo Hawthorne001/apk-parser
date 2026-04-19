@@ -1,7 +1,5 @@
 package net.dongliu.apk.parser.struct;
 
-import android.util.Log;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -181,39 +179,78 @@ public abstract class ResourceValue {
             if (resourceTable == null) {
                 return raw;
             }
+            String cached = resourceTable.getCachedString(resourceId, locale);
+            if (cached != null) {
+                return cached;
+            }
             final List<ResourceTable.Resource> resources = resourceTable.getResourcesById(resourceId);
             if (resources.isEmpty()) {
                 // If it's a platform resource that wasn't in our table, we can't resolve it.
                 if ((resourceId >> 24) == 0x01) {
                     return raw;
                 }
-//                android.util.Log.d("AppLog", "label fetching: getResourcesById(0x" + Long.toHexString(resourceId) + ") returned NOTHING");
                 return null;
             }
 
-            ResourceTable.Resource  selected = null;
+            ResourceTable.Resource selectedResource = null;
             int currentMaxScore = -1;
             int currentDensityLevel = -1;
+            int currentMaxSdkVersion = -1;
+
             // Search for the best locale match
             for (final ResourceTable.Resource resource : resources) {
                 final int matchScore = Locales.match(locale, resource.type.locale);
                 final int densityLevel = ReferenceResourceValue.densityLevel(resource.type.density);
-//                Log.d("AppLog", "label fetching: inspection of resource locale for now: " + resource.type.locale + " score:" + matchScore + " value:"+resource.resourceEntry.toStringValue(resourceTable, locale));
+                final int sdkVersion = resource.type.config.getSdkVersion();
+
                 if (matchScore > currentMaxScore) {
-                    Log.d("AppLog", "label fetching: selected locale for now: " + resource.type.locale + " score:" + matchScore+" value:"+resource.resourceEntry.toStringValue(resourceTable, locale));
-                    selected = resource;
+                    selectedResource = resource;
                     currentMaxScore = matchScore;
                     currentDensityLevel = densityLevel;
-                } else if (matchScore > 0 && matchScore == currentMaxScore && densityLevel > currentDensityLevel) {
-                    selected = resource;
-                    currentDensityLevel = densityLevel;
+                    currentMaxSdkVersion = sdkVersion;
+                } else if (matchScore > 0 && matchScore == currentMaxScore) {
+                    // Tie-breaking: Density, then SDK Version, then Order (latest wins)
+                    if (densityLevel > currentDensityLevel) {
+                        selectedResource = resource;
+                        currentDensityLevel = densityLevel;
+                        currentMaxSdkVersion = sdkVersion;
+                    } else if (densityLevel == currentDensityLevel && sdkVersion >= currentMaxSdkVersion) {
+                        selectedResource = resource;
+                        currentMaxSdkVersion = sdkVersion;
+                    }
                 }
             }
 
             // Recurse to get the value of the selected entry
-            if (selected != null) {
-                String result = selected.resourceEntry.toStringValue(resourceTable, locale);
-                android.util.Log.d("AppLog", "label fetching: ID 0x" + Long.toHexString(resourceId) + " recursed to result: " + result + " locale:" +  selected.type.locale);
+            if (selectedResource != null) {
+                String result = selectedResource.resourceEntry.toStringValue(resourceTable, locale);
+                if (result != null) {
+                    resourceTable.cacheString(resourceId, locale, result);
+                }
+
+                // Logging and filtering for app label identification
+                if (selectedResource.typeSpec.name.equals("string")) {
+                    long id = resourceId;
+                    if (id == 0x7f120024 || id == 0x7f12014f || id == 0x7f12001e) {
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("label fetching: ID 0x").append(Long.toHexString(id))
+                                .append(" recursed to result: ").append(result)
+                                .append(" locale:").append(selectedResource.type.locale)
+                                .append(" sdk:").append(selectedResource.type.config.getSdkVersion())
+                                .append(" stack:\n");
+                        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+                        for (int i = 2; i < Math.min(stackTrace.length, 12); i++) {
+                            sb.append("\tat ").append(stackTrace[i].toString()).append("\n");
+                        }
+                        android.util.Log.d("AppLog", sb.toString());
+
+                        // Log all candidates for this important ID to see selection logic in action
+//                        for (final ResourceTable.Resource res : resources) {
+//                            int s = Locales.match(locale, res.type.locale);
+//                            android.util.Log.d("AppLog", "label fetching: candidate for 0x" + Long.toHexString(id) + ": locale=" + res.type.locale + " sdk=" + res.type.config.getSdkVersion() + " score=" + s + " entry=" + res.resourceEntry);
+//                        }
+                    }
+                }
                 return result;
             }
             return null;

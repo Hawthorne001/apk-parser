@@ -23,6 +23,9 @@ public class Type {
     @NonNull
     public final Locale locale;
 
+    @NonNull
+    public final ResTableConfig config;
+
     private StringPool keyStringPool;
     private ByteBuffer buffer;
     private int[] offsets;
@@ -36,7 +39,7 @@ public class Type {
 
     public Type(final @NonNull TypeHeader header) {
         this.id = header.getId();
-        final ResTableConfig config = header.config;
+        this.config = header.config;
         this.locale = new Locale(config.getLanguage(), config.getCountry());
         this.density = config.getDensity();
     }
@@ -92,14 +95,15 @@ public class Type {
             return new ResourceMapEntry(size,flags,key,parent,count,resourceTableMaps);
         } else if ((flags & ResourceEntry.FLAG_COMPACT) != 0) {
             // Compact entries can be strings or references.
-            // If it looks like a resource ID, treat it as a reference.
-            ResourceValue value;
-            if (((keyRef >> 24) & 0xFF) == 0x7f || ((keyRef >> 24) & 0xFF) == 0x01) {
-                value = ResourceValue.reference((int) keyRef);
-            } else {
-                value = ResourceValue.string((int) keyRef, stringPool);
-            }
-            return new ResourceEntry(size,flags,null,value);
+            // The key is stored in the 'size' field (16-bit).
+            // The dataType is stored in the high 8 bits of 'flags'.
+            // The data is stored in the 'keyRef' field (32-bit).
+            int keyIndex = size;
+            int dataType = (flags >> 8) & 0xFF;
+            int realFlags = flags & 0xFF;
+            String key = keyStringPool.get(keyIndex);
+            ResourceValue value = ParseUtils.createResourceValue(dataType, (int) keyRef, stringPool);
+            return new ResourceEntry(8, realFlags, key, value);
         } else {
             String key = keyStringPool.get((int) keyRef);
             Buffers.position(buffer, beginPos + size);

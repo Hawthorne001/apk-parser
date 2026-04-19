@@ -1,5 +1,6 @@
 package net.dongliu.apk.parser.utils
 
+import androidx.core.text.ICUCompat
 import java.util.Locale
 
 /**
@@ -8,6 +9,11 @@ import java.util.Locale
 object Locales {
     const val PERFECT_SCORE = Integer.MAX_VALUE
 
+    private fun isPseudoLocale(locale: Locale): Boolean {
+        return (locale.language == "en" && locale.country == "XA") ||
+                (locale.language == "ar" && locale.country == "XB")
+    }
+
     /**
      * Scores a candidate locale against the desired device locale.
      * Higher is better.
@@ -15,36 +21,64 @@ object Locales {
      */
     @JvmStatic
     fun match(deviceLocale: Locale?, candidate: Locale): Int {
+        // 1. Perfect Match (including pseudo-locales if they match exactly)
+        if (deviceLocale != null && deviceLocale == candidate) {
+            return PERFECT_SCORE
+        }
+
         // Default/Empty configuration is the lowest possible positive match
         if (candidate.language.isEmpty()) {
             return 1
         }
+
+        // If languages are different, they definitely don't match
         val candidateLanguage = normalizeLanguage(candidate.language)
-        // 1. Handle Null Device Locale
-        if (deviceLocale == null) {
-            // Only the empty/default configuration is a valid match if no locale requested
-            return if (candidateLanguage.isEmpty()) 1 else 0
-        }
-        val deviceLanguage = normalizeLanguage(deviceLocale.language)
-        if (deviceLanguage != candidateLanguage)
+        val deviceLanguage = if (deviceLocale != null) normalizeLanguage(deviceLocale.language) else ""
+
+        if (deviceLanguage != candidateLanguage) {
             return 0
-        val deviceCountry = deviceLocale.country
+        }
+
+        // Languages match!
+
+        // 2. Pseudo-locale handling: If they are not equal (checked above), and one is pseudo, it's a mismatch
+        if (isPseudoLocale(candidate) || (deviceLocale != null && isPseudoLocale(deviceLocale))) {
+            return 0
+        }
+
+        // 3. Script matching
+        val deviceScript = if (deviceLocale != null) getScript(deviceLocale) else ""
+        val candidateScript = getScript(candidate)
+        if (deviceScript != candidateScript && deviceScript.isNotEmpty() && candidateScript.isNotEmpty()) {
+            return 0
+        }
+
+        // Script matches (or at least one is missing).
+
         val candidateCountry = candidate.country
-        // 1. Perfect Match
-        if (deviceCountry == candidateCountry && !deviceCountry.isEmpty())
-            return PERFECT_SCORE
-        // 2. Language-only match (e.g., candidate is 'en')
-        if (candidateCountry.isEmpty())
+        val deviceCountry = deviceLocale?.country ?: ""
+
+        // 4. Candidate has no country (general language match)
+        if (candidateCountry.isEmpty()) {
             return 50
-        // 3. Representative Fallback Match (The en-GB / en-US logic)
-        // Android uses an internal table. en-GB is the representative for many
-        // International English regions (like IL, AU, etc.)
-        if (isRepresentativeMatch(deviceLanguage, deviceCountry, candidateCountry)) {
+        }
+
+        // 5. Representative Fallback Match (e.g., en-GB for en-AU)
+        if (deviceLocale != null && isRepresentativeMatch(deviceLanguage, deviceCountry, candidateCountry)) {
             return 40
         }
-        // 4. Siblings (en-US vs en-GB) - Android usually prefers Default over a mismatched country
-        // unless it's a representative.
+
+        // 6. Sibling (same language, different country, neither is a representative)
+        // We return 0 now to prefer the default configuration over a wrong regional variant.
         return 0
+    }
+
+    private fun getScript(locale: Locale): String {
+        return try {
+            ICUCompat.maximizeAndGetScript(locale) ?: ""
+        } catch (e: Throwable) {
+            ""
+        }
     }
 
     /**
