@@ -69,8 +69,9 @@ object Locales {
         }
 
         // 6. Sibling (same language, different country, neither is a representative)
-        // We return 0 now to prefer the default configuration over a wrong regional variant.
-        return 0
+        // A sibling match is still better than the default/empty configuration (score 1),
+        // but worse than any of the above matches.
+        return 5
     }
 
     private fun getScript(locale: Locale): String {

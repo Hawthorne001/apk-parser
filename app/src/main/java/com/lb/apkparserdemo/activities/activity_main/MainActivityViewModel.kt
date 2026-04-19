@@ -88,14 +88,10 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-//                    it.add("com.android.wallpaper")
-//                    it.add("com.google.android.apps.setupwizard.searchselector")
+//                    it.add("com.lb.myapplication")
+                    it.add("com.android.wallpaper")
+//                    it.add("com.google.android.apps.wallpaper")
 //                    it.add("com.google.android.odad")
-//                    it.add("com.google.android.cellbroadcastreceiver")
-//                    it.add("com.google.android.apps.pixel.dcservice")
-//                    it.add("com.google.android.photopicker")
-//                    it.add("com.google.android.storagemanager")
-                    it.add("com.lb.myapplication")
 
                 }
         val installedPackages =
@@ -210,10 +206,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                 }
 
                 // Get the default translation (usually from values/strings.xml)
-                val defaultLabelOfLibrary = currentApkInfo.apkMetaTranslator.getDefaultLabel()
-                if (packageName == "com.google.android.cellbroadcastreceiver") {
-                     Log.d("AppLog", "label fetching: Default label for \"$packageName\": $defaultLabelOfLibrary")
-                }
+                currentApkInfo.apkMetaTranslator.getDefaultLabel()
             }
             apkFilesHandledLiveData.inc()
             ++apksHandledSoFar
