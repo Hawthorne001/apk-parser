@@ -24,8 +24,10 @@ class ComparisonViewModel(application: Application) : AndroidViewModel(applicati
         _loading.value = true
         viewModelScope.launch {
             val db = AppDatabase.getDatabase(getApplication())
-            val list = db.appIconDao().getAll()
-            _items.value = list
+            val allItems = db.appIconDao().getAll()
+            val scannedPackages = com.lb.apkparserdemo.utils.SessionTracker.getScannedPackages()
+            val filteredList = allItems.filter { scannedPackages.isEmpty() || scannedPackages.contains(it.packageName) }
+            _items.value = filteredList
             _loading.value = false
         }
     }

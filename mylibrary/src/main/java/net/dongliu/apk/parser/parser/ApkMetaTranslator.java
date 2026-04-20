@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import net.dongliu.apk.parser.bean.ApkMeta;
+import net.dongliu.apk.parser.bean.DeviceConfig;
 import net.dongliu.apk.parser.bean.GlEsVersion;
 import net.dongliu.apk.parser.bean.IconPath;
 import net.dongliu.apk.parser.bean.Permission;
@@ -40,12 +41,12 @@ public class ApkMetaTranslator implements XmlStreamer {
 
     private final ResourceTable resourceTable;
     @Nullable
-    private final Locale locale;
+    private final DeviceConfig deviceConfig;
     private java.util.Set<Locale> allLocales = java.util.Collections.emptySet();
 
-    public ApkMetaTranslator(final @NonNull ResourceTable resourceTable, @Nullable final Locale locale) {
+    public ApkMetaTranslator(final @NonNull ResourceTable resourceTable, @Nullable final DeviceConfig deviceConfig) {
         this.resourceTable = resourceTable;
-        this.locale = locale;
+        this.deviceConfig = deviceConfig;
     }
 
     public void setAllLocales(java.util.Set<Locale> allLocales) {
@@ -87,10 +88,10 @@ public class ApkMetaTranslator implements XmlStreamer {
                     // Step 1: Use already resolved value if available, else try matched locale
                     label = labelAttr.value;
                     if (label == null) {
-                        label = labelAttr.toStringValue(this.resourceTable, this.locale);
+                        label = labelAttr.toStringValue(this.resourceTable, this.deviceConfig);
                     }
                     this.resolvedLabel = label;
-                    this.resolvedLabelLocale = this.locale;
+                    this.resolvedLabelLocale = this.deviceConfig != null ? this.deviceConfig.getLocale() : null;
 
                     if (label != null && label.startsWith("resourceId:0x")) {
                         // Resolution failed or just returned ID
@@ -257,10 +258,10 @@ public class ApkMetaTranslator implements XmlStreamer {
         java.util.Map<Locale, ResourceTable.Resource> bestResources = new java.util.HashMap<>();
 
         for (ResourceTable.Resource resource : resources) {
-            String value = resource.resourceEntry.toStringValue(this.resourceTable, resource.type.locale);
+            String value = resource.resourceEntry.toStringValue(this.resourceTable, DeviceConfig.defaultLocale(resource.type.locale));
             if (value != null && !value.startsWith("resourceId:0x")) {
                 ResourceTable.Resource currentBest = bestResources.get(resource.type.locale);
-                if (currentBest == null || isBetterThan(resource, currentBest)) {
+                if (currentBest == null || isBetterThan(resource, currentBest, null)) {
                     bestResources.put(resource.type.locale, resource);
                     map.put(resource.type.locale, value);
                 }
@@ -269,14 +270,25 @@ public class ApkMetaTranslator implements XmlStreamer {
         return map;
     }
 
-    private boolean isBetterThan(ResourceTable.Resource candidate, ResourceTable.Resource current) {
+    private boolean isBetterThan(ResourceTable.Resource candidate, ResourceTable.Resource current, @Nullable DeviceConfig requestedConfig) {
         if (current == null) return true;
-        if (candidate.type.config.getMcc() != current.type.config.getMcc()) {
-            return candidate.type.config.getMcc() != 0;
+        
+        if (requestedConfig != null && requestedConfig.getMcc() != 0) {
+            if (candidate.type.config.getMcc() != current.type.config.getMcc()) {
+                return candidate.type.config.getMcc() != 0;
+            }
+            if (candidate.type.config.getMnc() != current.type.config.getMnc()) {
+                return candidate.type.config.getMnc() != 0;
+            }
+        } else {
+            if (candidate.type.config.getMcc() != current.type.config.getMcc()) {
+                return candidate.type.config.getMcc() == 0;
+            }
+            if (candidate.type.config.getMnc() != current.type.config.getMnc()) {
+                return candidate.type.config.getMnc() == 0;
+            }
         }
-        if (candidate.type.config.getMnc() != current.type.config.getMnc()) {
-            return candidate.type.config.getMnc() != 0;
-        }
+        
         if (candidate.type.config.getSdkVersion() != current.type.config.getSdkVersion()) {
             return candidate.type.config.getSdkVersion() > current.type.config.getSdkVersion();
         }
@@ -285,14 +297,20 @@ public class ApkMetaTranslator implements XmlStreamer {
 
     @NonNull
     public String getLabel(@Nullable Locale locale) {
+        return getLabel(locale != null ? DeviceConfig.defaultLocale(locale) : null);
+    }
+
+    @NonNull
+    public String getLabel(@Nullable DeviceConfig config) {
         if (this.labelResId == 0) {
             String label = this.apkMetaBuilder.getLabel();
             return label != null ? label : "";
         }
+        Locale locale = config != null ? config.getLocale() : null;
         if (locale != null && locale.equals(this.resolvedLabelLocale) && this.resolvedLabel != null) {
             return this.resolvedLabel;
         }
-        String label = ResourceValue.reference((int) this.labelResId).toStringValue(this.resourceTable, locale);
+        String label = ResourceValue.reference((int) this.labelResId).toStringValue(this.resourceTable, config);
         if (label != null && !label.startsWith("resourceId:0x")) {
             return label;
         }
@@ -306,7 +324,7 @@ public class ApkMetaTranslator implements XmlStreamer {
      */
     @NonNull
     public String getDefaultLabel() {
-        return getLabel(null);
+        return getLabel((DeviceConfig) null);
     }
 
     /**
@@ -360,7 +378,7 @@ public class ApkMetaTranslator implements XmlStreamer {
                 long nextId = ((ResourceValue.ReferenceResourceValue) resourceEntry.value).getReferenceResourceId();
                 icons.addAll(extractIconPathsById(nextId, attrName, visitedIds));
             } else {
-                final String path = resourceEntry.toStringValue(this.resourceTable, (java.util.Locale) null);
+                final String path = resourceEntry.toStringValue(this.resourceTable, (DeviceConfig) null);
                 if (path == null) continue;
                 if (resource.type.density == Densities.DEFAULT) {
                     hasDefault = true;

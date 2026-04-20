@@ -3,6 +3,7 @@ package net.dongliu.apk.parser.struct.resource;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import net.dongliu.apk.parser.bean.DeviceConfig;
 import net.dongliu.apk.parser.struct.ResourceValue;
 
 import java.util.Locale;
@@ -69,13 +70,19 @@ public class ResourceEntry {
      * get value as string
      */
     @Nullable
-    public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
+    public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
         final ResourceValue value = this.value;
         if (value != null) {
-            return value.toStringValue(resourceTable, locale);
+            return value.toStringValue(resourceTable, config);
         } else {
             return null;
         }
+    }
+
+    @Deprecated
+    @Nullable
+    public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
+        return toStringValue(resourceTable, locale != null ? DeviceConfig.defaultLocale(locale) : null);
     }
 
     @NonNull

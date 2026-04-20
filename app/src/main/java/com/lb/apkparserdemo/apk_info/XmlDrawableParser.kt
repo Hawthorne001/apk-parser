@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.vector.*
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import net.dongliu.apk.parser.bean.DeviceConfig
 import net.dongliu.apk.parser.parser.BinaryXmlParser
 import net.dongliu.apk.parser.parser.XmlStreamer
 import net.dongliu.apk.parser.parser.XmlTranslator
@@ -27,12 +28,12 @@ import java.util.*
 
 object XmlDrawableParser {
 
-    fun tryParseDrawable(context: Context, binXml: ByteArray, apkInfo: ApkInfo, locale: Locale?, subResourceProvider: ((String) -> ByteArray?)? = null): Drawable? {
+    fun tryParseDrawable(context: Context, binXml: ByteArray, apkInfo: ApkInfo, deviceConfig: DeviceConfig?, subResourceProvider: ((String) -> ByteArray?)? = null): Drawable? {
         android.util.Log.d("AppLog", "icon fetching: tryParseDrawable (Binary)")
         try {
             val xmlTranslator = XmlTranslator()
             val fallbackBuffer = ByteBuffer.wrap(binXml)
-            val fallbackBinaryXmlParser = BinaryXmlParser(fallbackBuffer, apkInfo.resourceTable, xmlTranslator, locale)
+            val fallbackBinaryXmlParser = BinaryXmlParser(fallbackBuffer, apkInfo.resourceTable, xmlTranslator, deviceConfig)
             fallbackBinaryXmlParser.parse()
             val xml = xmlTranslator.xml
             android.util.Log.d("AppLog", "icon fetching: XML content:\n$xml")
@@ -40,8 +41,8 @@ object XmlDrawableParser {
             android.util.Log.d("AppLog", "icon fetching: failed to log XML content: ${e.message}")
         }
 
-        val streamer = VectorDrawableStreamer(context, apkInfo, locale, subResourceProvider)
-        val parser = BinaryXmlParser(ByteBuffer.wrap(binXml), apkInfo.resourceTable, streamer, locale)
+        val streamer = VectorDrawableStreamer(context, apkInfo, deviceConfig, subResourceProvider)
+        val parser = BinaryXmlParser(ByteBuffer.wrap(binXml), apkInfo.resourceTable, streamer, deviceConfig)
         return try {
             parser.parse()
             if (streamer.isVector) {
@@ -117,7 +118,7 @@ object XmlDrawableParser {
     private class VectorDrawableStreamer(
         private val context: Context,
         private val apkInfo: ApkInfo,
-        private val locale: Locale?,
+        private val deviceConfig: DeviceConfig?,
         private val subResourceProvider: ((String) -> ByteArray?)?
     ) : XmlStreamer {
         var imageVector: ImageVector? = null
@@ -167,8 +168,8 @@ object XmlDrawableParser {
                         // If it's a path or resourceId, we should try to parse it
                         if (innerDrawable.endsWith(".xml")) {
                             subResourceProvider?.invoke(innerDrawable)?.let { innerBytes ->
-                                val subStreamer = VectorDrawableStreamer(context, apkInfo, locale, subResourceProvider)
-                                val subParser = BinaryXmlParser(ByteBuffer.wrap(innerBytes), apkInfo.resourceTable, subStreamer, locale)
+                                val subStreamer = VectorDrawableStreamer(context, apkInfo, deviceConfig, subResourceProvider)
+                                val subParser = BinaryXmlParser(ByteBuffer.wrap(innerBytes), apkInfo.resourceTable, subStreamer, deviceConfig)
                                 try {
                                     subParser.parse()
                                     subStreamer.imageVector?.let { subVector ->
@@ -188,15 +189,15 @@ object XmlDrawableParser {
                     builder?.addPath(
                         pathData = addPathNodes(pathData),
                         name = attr.getString("name") ?: "",
-                        fill = attr.getString("fillColor")?.let { obtainBrush(context, it, apkInfo, locale, subResourceProvider) },
+                        fill = attr.getString("fillColor")?.let { obtainBrush(context, it, apkInfo, deviceConfig, subResourceProvider) },
                         fillAlpha = attr.getString("fillAlpha")?.toFloat() ?: 1f,
-                        stroke = attr.getString("strokeColor")?.let { obtainBrush(context, it, apkInfo, locale, subResourceProvider) },
+                        stroke = attr.getString("strokeColor")?.let { obtainBrush(context, it, apkInfo, deviceConfig, subResourceProvider) },
                         strokeAlpha = attr.getString("strokeAlpha")?.toFloat() ?: 1f,
                         strokeLineWidth = attr.getString("strokeWidth")?.toFloat() ?: 0f,
                         strokeLineCap = parseStrokeCap(attr.getString("strokeLineCap")),
                         strokeLineJoin = parseStrokeJoin(attr.getString("strokeLineJoin")),
                         strokeLineMiter = attr.getString("strokeMiterLimit")?.toFloat() ?: 4f,
-                        pathFillType = if (attr.getString("fillType") == "evenOdd") PathFillType.EvenOdd else PathFillType.NonZero
+                        pathFillType = if (attr.getString("fillType") == "evenOdd" || attr.getString("fillType") == "1") PathFillType.EvenOdd else PathFillType.NonZero
                     )
                 }
                 "clip-path" -> {
@@ -468,7 +469,7 @@ object XmlDrawableParser {
         context: Context,
         colorStr: String,
         apkInfo: ApkInfo? = null,
-        locale: Locale? = null,
+        deviceConfig: DeviceConfig? = null,
         subResourceProvider: ((String) -> ByteArray?)? = null
     ): Brush? {
         val color = parseColor(context, colorStr)
@@ -478,7 +479,7 @@ object XmlDrawableParser {
             android.util.Log.d("AppLog", "icon fetching: attempting to parse complex color: $colorStr")
             val bytes = subResourceProvider(colorStr)
             if (bytes != null) {
-                return tryParseComplexColor(context, bytes, apkInfo, locale, subResourceProvider)
+                return tryParseComplexColor(context, bytes, apkInfo, deviceConfig, subResourceProvider)
             } else {
                 android.util.Log.d("AppLog", "icon fetching: subResourceProvider returned null for $colorStr")
             }
@@ -490,16 +491,21 @@ object XmlDrawableParser {
         context: Context,
         bytes: ByteArray,
         apkInfo: ApkInfo,
-        locale: Locale?,
+        deviceConfig: DeviceConfig?,
         subResourceProvider: ((String) -> ByteArray?)?
     ): Brush? {
-        val streamer = GradientStreamer(context, apkInfo, locale, subResourceProvider)
-        val parser = BinaryXmlParser(ByteBuffer.wrap(bytes), apkInfo.resourceTable, streamer, locale)
+        val streamer = GradientStreamer(context, apkInfo, deviceConfig, subResourceProvider)
+        val parser = BinaryXmlParser(ByteBuffer.wrap(bytes), apkInfo.resourceTable, streamer, deviceConfig)
         try {
             parser.parse()
+            if (streamer.brush != null) {
+                android.util.Log.d("AppLog", "icon fetching: successfully parsed complex color")
+            } else {
+                android.util.Log.d("AppLog", "icon fetching: failed to parse complex color (brush is null)")
+            }
             return streamer.brush
         } catch (e: Exception) {
-            android.util.Log.d("AppLog", "icon fetching: failed to parse complex color: ${e.message}")
+            android.util.Log.d("AppLog", "icon fetching: failed to parse complex color exception: ${e.message}")
         }
         return null
     }
@@ -507,7 +513,7 @@ object XmlDrawableParser {
     private class GradientStreamer(
         private val context: Context,
         private val apkInfo: ApkInfo,
-        private val locale: Locale?,
+        private val deviceConfig: DeviceConfig?,
         private val subResourceProvider: ((String) -> ByteArray?)?
     ) : XmlStreamer {
         var brush: Brush? = null
@@ -545,7 +551,7 @@ object XmlDrawableParser {
                     val offset = attr.getString("offset")?.toFloat() ?: 0f
                     val colorStr = attr.getString("color")
                     val color = if (colorStr != null) {
-                        obtainBrush(context, colorStr, apkInfo, locale, subResourceProvider)?.let {
+                        obtainBrush(context, colorStr, apkInfo, deviceConfig, subResourceProvider)?.let {
                             if (it is SolidColor) it.value else Color.Transparent
                         } ?: Color.Transparent
                     } else Color.Transparent

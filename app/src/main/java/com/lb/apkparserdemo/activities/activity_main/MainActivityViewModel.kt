@@ -28,6 +28,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
+import net.dongliu.apk.parser.bean.DeviceConfig
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream
 import java.io.FileInputStream
 import java.util.Locale
@@ -71,29 +72,31 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
     }
 
     private suspend fun performTests() {
-        appIconDao.deleteAll()
-        IconStorage.clearCache(applicationContext)
+        com.lb.apkparserdemo.utils.SessionTracker.clear()
+        val config = applicationContext.resources.configuration
         val localeList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            val list = applicationContext.resources.configuration.locales
+            val list = config.locales
             val result = mutableListOf<Locale>()
             for (i in 0 until list.size()) {
                 result.add(list.get(i))
             }
             result
         } else {
-            listOf(Locale.getDefault())
+            @Suppress("DEPRECATION")
+            listOf(config.locale)
         }
 //        Locales.matcher=SystemLocaleMatcher()
         val mainLocale = localeList.firstOrNull()
+        val deviceConfig = DeviceConfig.create(mainLocale, config.mcc, config.mnc)
         val context = applicationContext
         val appIconSize = AppInfoUtil.getAppIconSize(context)
         val packageManager = context.packageManager
-        Log.d("AppLog", "getting all package infos: locale:$mainLocale")
+        Log.d("AppLog", "getting all package infos: deviceConfig:$deviceConfig")
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
 //                    it.add("com.lb.lwp_plus")
-                    it.add(context.packageName)
+//                    it.add(context.packageName)
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
@@ -117,7 +120,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             val apkInfo = try {
                 val filters = allApkFilePaths.map { getZipFilter(it, ZIP_FILTER_TYPE) }
                 val info = ApkInfo.getConsolidatedApkInfo(
-                        mainLocale, filters,
+                        deviceConfig, filters,
                         requestParseManifestXmlTagForApkType = GET_APK_TYPE,
                         requestParseResources = VALIDATE_RESOURCES
                 )
@@ -144,7 +147,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             if (VALIDATE_RESOURCES) {
                 //check if the library can get app icon, if required
                 appIcon = ApkIconFetcher.getApkIcon(
-                        context, mainLocale, object : ApkIconFetcher.ZipFilterCreator {
+                        context, deviceConfig, object : ApkIconFetcher.ZipFilterCreator {
                     override fun generateZipFilter(): AbstractZipFilter =
                             MultiZipFilter(allApkFilePaths.map { getZipFilter(it, ZIP_FILTER_TYPE) })
                 }, currentApkInfo, appIconSize
@@ -239,6 +242,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                         }
                     }
                 }
+                com.lb.apkparserdemo.utils.SessionTracker.addPackage(packageName)
             }
             apkFilesHandledLiveData.inc()
             ++apksHandledSoFar

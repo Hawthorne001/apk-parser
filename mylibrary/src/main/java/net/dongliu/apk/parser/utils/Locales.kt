@@ -1,10 +1,12 @@
 package net.dongliu.apk.parser.utils
 
 import androidx.core.text.ICUCompat
+import net.dongliu.apk.parser.bean.DeviceConfig
+import net.dongliu.apk.parser.struct.resource.ResourceTable
 import java.util.Locale
 
 /**
- * Mimics Android's Resource resolution logic for Locales.
+ * Mimics Android's Resource resolution logic for Locales and Device configurations.
  */
 object Locales {
     const val PERFECT_SCORE = Integer.MAX_VALUE
@@ -15,9 +17,28 @@ object Locales {
     }
 
     /**
-     * Scores a candidate locale against the desired device locale.
+     * Scores a candidate resource against the desired device configuration.
      * Higher is better.
      * 0 means completely incompatible.
+     */
+    @JvmStatic
+    fun match(requestedConfig: DeviceConfig?, candidate: ResourceTable.Resource): Int {
+        val config = candidate.type.config
+        
+        // 1. MCC/MNC matching (High priority)
+        if (requestedConfig != null) {
+            val reqMcc = requestedConfig.mcc
+            val reqMnc = requestedConfig.mnc
+            if (reqMcc != 0 && config.mcc != 0 && config.mcc != reqMcc) return 0
+            if (reqMnc != 0 && config.mnc != 0 && config.mnc != reqMnc) return 0
+        }
+
+        // 2. Locale matching
+        return match(requestedConfig?.locale, candidate.type.locale)
+    }
+
+    /**
+     * Scores a candidate locale against the desired device locale.
      */
     @JvmStatic
     fun match(deviceLocale: Locale?, candidate: Locale): Int {

@@ -3,6 +3,7 @@ package net.dongliu.apk.parser.struct.xml;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import net.dongliu.apk.parser.bean.DeviceConfig;
 import net.dongliu.apk.parser.struct.ResourceValue;
 import net.dongliu.apk.parser.struct.resource.ResourceTable;
 
@@ -35,14 +36,20 @@ public class XmlCData {
      * get value as string
      */
     @NonNull
-    public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
+    public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
         if (this.data != null) {
             return XmlCData.CDATA_START + this.data + XmlCData.CDATA_END;
         } else if (this.typedData != null) {
-            return XmlCData.CDATA_START + this.typedData.toStringValue(resourceTable, locale) + XmlCData.CDATA_END;
+            return XmlCData.CDATA_START + this.typedData.toStringValue(resourceTable, config) + XmlCData.CDATA_END;
         } else {
             return "";
         }
+    }
+
+    @Deprecated
+    @NonNull
+    public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
+        return toStringValue(resourceTable, locale != null ? DeviceConfig.defaultLocale(locale) : null);
     }
 
     public String getData() {

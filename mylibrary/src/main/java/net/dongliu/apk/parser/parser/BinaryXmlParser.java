@@ -3,6 +3,7 @@ package net.dongliu.apk.parser.parser;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import net.dongliu.apk.parser.bean.DeviceConfig;
 import net.dongliu.apk.parser.exception.ParserException;
 import net.dongliu.apk.parser.struct.ChunkHeader;
 import net.dongliu.apk.parser.struct.ChunkType;
@@ -56,18 +57,26 @@ public class BinaryXmlParser {
     @NonNull
     private final ResourceTable resourceTable;
     /**
-     * preferred locale.
+     * preferred config.
      */
+    @Nullable
+    private final DeviceConfig config;
     @Nullable
     private final Locale locale;
 
     public BinaryXmlParser(final @NonNull ByteBuffer buffer, final @NonNull ResourceTable resourceTable, final @NonNull XmlStreamer xmlStreamer
-            , final @Nullable Locale locale) {
+            , final @Nullable DeviceConfig config) {
         this.buffer = buffer.duplicate();
         this.buffer.order(ByteOrder.LITTLE_ENDIAN);
         this.resourceTable = resourceTable;
         this.xmlStreamer = xmlStreamer;
-        this.locale = locale;
+        this.config = config;
+        this.locale = config != null ? config.getLocale() : null;
+    }
+
+    public BinaryXmlParser(final @NonNull ByteBuffer buffer, final @NonNull ResourceTable resourceTable, final @NonNull XmlStreamer xmlStreamer
+            , final @Nullable Locale locale) {
+        this(buffer, resourceTable, xmlStreamer, locale != null ? DeviceConfig.defaultLocale(locale) : null);
     }
 
     public void parse() {
@@ -185,7 +194,7 @@ public class BinaryXmlParser {
         for (int count = 0; count < attributeCount; count++) {
             final Attribute attribute = this.readAttribute();
             final String attributeName = attribute.name;
-            String value = attribute.toStringValue(this.resourceTable, this.locale);
+            String value = attribute.toStringValue(this.resourceTable, this.config);
             if (value != null && BinaryXmlParser.intAttributes.contains(attributeName) && Strings.isNumeric(value)) {
                 try {
                     value = this.getFinalValueAsString(attributeName, value);

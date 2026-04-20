@@ -3,13 +3,13 @@ package net.dongliu.apk.parser.struct;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import net.dongliu.apk.parser.bean.DeviceConfig;
 import net.dongliu.apk.parser.struct.resource.Densities;
 import net.dongliu.apk.parser.struct.resource.ResourceTable;
 import net.dongliu.apk.parser.struct.xml.Attribute;
 import net.dongliu.apk.parser.utils.Locales;
 
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Resource entity, contains the resource id, should retrieve the value from resource table, or string pool if it is a string resource.
@@ -27,7 +27,7 @@ public abstract class ResourceValue {
      * get value as string.
      */
     @Nullable
-    public abstract String toStringValue(ResourceTable resourceTable, @Nullable Locale locale);
+    public abstract String toStringValue(ResourceTable resourceTable, @Nullable DeviceConfig config);
 
     @NonNull
     public static ResourceValue decimal(final int value) {
@@ -96,7 +96,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
             return String.valueOf(this.value);
         }
     }
@@ -108,7 +108,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
             return "0x" + Integer.toHexString(this.value);
         }
     }
@@ -120,7 +120,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
             return String.valueOf(this.value != 0);
         }
     }
@@ -135,7 +135,7 @@ public abstract class ResourceValue {
 
         @Nullable
         @Override
-        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
             if (this.value >= 0) {
                 String result = this.stringPool.get(this.value);
 //                if (result == null) {
@@ -166,7 +166,7 @@ public abstract class ResourceValue {
 
         @Override
         @Nullable
-        public String toStringValue(final @Nullable ResourceTable resourceTable, @Nullable final Locale locale) {
+        public String toStringValue(final @Nullable ResourceTable resourceTable, @Nullable final DeviceConfig config) {
             final long resourceId = this.getReferenceResourceId();
             // android system styles.
             if (resourceId > AndroidConstants.SYS_STYLE_ID_START && resourceId < AndroidConstants.SYS_STYLE_ID_END) {
@@ -191,16 +191,16 @@ public abstract class ResourceValue {
             ResourceTable.Resource selectedResource = null;
             int currentMaxScore = 0; // Start at 0 to only accept positive matches
 
-            // Search for the best locale match
+            // Search for the best match
             for (final ResourceTable.Resource resource : resources) {
-                final int matchScore = Locales.match(locale, resource.type.locale);
+                final int matchScore = Locales.match(config, resource);
 
                 if (matchScore > currentMaxScore) {
                     selectedResource = resource;
                     currentMaxScore = matchScore;
                 } else if (matchScore > 0 && matchScore == currentMaxScore) {
                     // Tie-breaker: pick the more specific configuration
-                    if (isBetterThan(resource, selectedResource)) {
+                    if (isBetterThan(resource, selectedResource, config)) {
                         selectedResource = resource;
                     }
                 }
@@ -208,7 +208,7 @@ public abstract class ResourceValue {
 
             // Recurse to get the value of the selected entry
             if (selectedResource != null) {
-                return selectedResource.resourceEntry.toStringValue(resourceTable, locale);
+                return selectedResource.resourceEntry.toStringValue(resourceTable, config);
             }
             return null;
         }
@@ -217,15 +217,25 @@ public abstract class ResourceValue {
          * Rudimentary configuration specificity comparison.
          * Returns true if 'candidate' is a better match than 'current'.
          */
-        private boolean isBetterThan(ResourceTable.Resource candidate, ResourceTable.Resource current) {
+        private boolean isBetterThan(ResourceTable.Resource candidate, ResourceTable.Resource current, @Nullable DeviceConfig requestedConfig) {
             if (current == null) return true;
 
             // 1. MCC/MNC matching is very high priority in Android
-            if (candidate.type.config.getMcc() != current.type.config.getMcc()) {
-                return candidate.type.config.getMcc() != 0;
-            }
-            if (candidate.type.config.getMnc() != current.type.config.getMnc()) {
-                return candidate.type.config.getMnc() != 0;
+            if (requestedConfig != null && requestedConfig.getMcc() != 0) {
+                if (candidate.type.config.getMcc() != current.type.config.getMcc()) {
+                    return candidate.type.config.getMcc() != 0;
+                }
+                if (candidate.type.config.getMnc() != current.type.config.getMnc()) {
+                    return candidate.type.config.getMnc() != 0;
+                }
+            } else {
+                // If no specific MCC/MNC requested, prefer ones that DON'T have them (default)
+                if (candidate.type.config.getMcc() != current.type.config.getMcc()) {
+                    return candidate.type.config.getMcc() == 0;
+                }
+                if (candidate.type.config.getMnc() != current.type.config.getMnc()) {
+                    return candidate.type.config.getMnc() == 0;
+                }
             }
 
             // 2. SDK Version
@@ -265,7 +275,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
             return "";
         }
     }
@@ -279,7 +289,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
             final StringBuilder sb = new StringBuilder();
             sb.append("#");
             for (int i = this.len - 1; i >= 0; i--) {
@@ -298,7 +308,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
             final short unit = (short) (this.value & 0xff);
             final String unitStr;
             switch (unit) {
@@ -334,7 +344,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
             // The low-order 4 bits of the data value specify the type of the fraction
             final short type = (short) (this.value & 0xf);
             final String pstr;
@@ -362,7 +372,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
             return "{" + this.dataType + ":" + (this.value & 0xFFFFFFFFL) + "}";
         }
     }
@@ -373,7 +383,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
             return "?" + Attribute.getString(this.value & 0xFFFFFFFFL);
         }
     }
@@ -384,7 +394,7 @@ public abstract class ResourceValue {
         }
 
         @Override
-        public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
+        public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
             return String.valueOf(Float.intBitsToFloat(this.value));
         }
     }

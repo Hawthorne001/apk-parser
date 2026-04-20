@@ -1,5 +1,6 @@
 package net.dongliu.apk.parser.struct.xml
 
+import net.dongliu.apk.parser.bean.DeviceConfig
 import net.dongliu.apk.parser.struct.ResourceValue
 import net.dongliu.apk.parser.struct.resource.ResourceTable
 import net.dongliu.apk.parser.utils.ResourceLoader
@@ -27,19 +28,23 @@ class Attribute(
     @JvmField
     var value: String? = null
 
-    fun toStringValue(resourceTable: ResourceTable, locale: Locale?): String? {
+    fun toStringValue(resourceTable: ResourceTable, config: DeviceConfig?): String? {
         val rawValue = rawValue
         return if (rawValue != null) {
             rawValue
         } else {
             val typedValue = typedValue
             if (typedValue != null) {
-                typedValue.toStringValue(resourceTable, locale)
+                typedValue.toStringValue(resourceTable, config)
             } else {
                 // something happen;
                 ""
             }
         }
+    }
+
+    fun toStringValue(resourceTable: ResourceTable, locale: Locale?): String? {
+        return toStringValue(resourceTable, if (locale != null) DeviceConfig.defaultLocale(locale) else null)
     }
 
     override fun toString(): String {

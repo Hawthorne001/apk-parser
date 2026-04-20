@@ -11,6 +11,7 @@ import net.dongliu.apk.parser.bean.ApkSignStatus;
 import net.dongliu.apk.parser.bean.ApkSigner;
 import net.dongliu.apk.parser.bean.ApkV2Signer;
 import net.dongliu.apk.parser.bean.CertificateMeta;
+import net.dongliu.apk.parser.bean.DeviceConfig;
 import net.dongliu.apk.parser.bean.DexClass;
 import net.dongliu.apk.parser.bean.Icon;
 import net.dongliu.apk.parser.bean.IconFace;
@@ -173,7 +174,7 @@ public abstract class AbstractApkFile implements Closeable {
         }
         this.parseResourceTable();
         final XmlTranslator xmlTranslator = new XmlTranslator();
-        final ApkMetaTranslator apkTranslator = new ApkMetaTranslator(this.resourceTable, this.preferredLocale);
+        final ApkMetaTranslator apkTranslator = new ApkMetaTranslator(this.resourceTable, DeviceConfig.defaultLocale(this.preferredLocale));
         final XmlStreamer xmlStreamer = new CompositeXmlStreamer(xmlTranslator, apkTranslator);
         final byte[] data = this.getFileData(AndroidConstants.MANIFEST_FILE);
         if (data == null) {

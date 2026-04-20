@@ -1,5 +1,6 @@
 package com.lb.apkparserdemo.apk_info
 
+import net.dongliu.apk.parser.bean.DeviceConfig
 import net.dongliu.apk.parser.parser.ApkMetaTranslator
 import net.dongliu.apk.parser.parser.BinaryXmlParser
 import net.dongliu.apk.parser.parser.CompositeXmlStreamer
@@ -25,7 +26,7 @@ class ApkInfo(
 
         @Suppress("SameParameterValue")
         fun internalGetApkInfo(
-                preferredLocale: Locale?,
+                deviceConfig: DeviceConfig?,
                 baseZipFilter: AbstractZipFilter,
                 extraZipFilters: List<AbstractZipFilter> = emptyList(),
                 requestParseManifestXmlTagForApkType: Boolean = false,
@@ -83,11 +84,11 @@ class ApkInfo(
                         }
                         table
                     }
-            val apkMetaTranslator = ApkMetaTranslator(resourceTable, preferredLocale)
+            val apkMetaTranslator = ApkMetaTranslator(resourceTable, deviceConfig)
             val binaryXmlParser = BinaryXmlParser(
                     ByteBuffer.wrap(manifestBytes), resourceTable,
                     CompositeXmlStreamer(xmlTranslator, apkMetaTranslator),
-                    preferredLocale
+                    deviceConfig
             )
             try {
                 binaryXmlParser.parse()
@@ -176,13 +177,13 @@ class ApkInfo(
         }
 
         fun getConsolidatedApkInfo(
-                preferredLocale: Locale?, filters: List<AbstractZipFilter>,
+                deviceConfig: DeviceConfig?, filters: List<AbstractZipFilter>,
                 requestParseManifestXmlTagForApkType: Boolean = false,
                 requestParseResources: Boolean = false
         ): ApkInfo? {
             if (filters.isEmpty()) return null
             if (filters.size == 1) return internalGetApkInfo(
-                    preferredLocale,
+                    deviceConfig,
                     filters[0],
                     emptyList(),
                     requestParseManifestXmlTagForApkType,
@@ -196,12 +197,12 @@ class ApkInfo(
                 val manifestBytes = filter.getByteArrayForEntries(hashSetOf(AndroidConstants.MANIFEST_FILE))
                         ?.get(AndroidConstants.MANIFEST_FILE)
                 if (manifestBytes != null) {
-                    val apkMetaTranslator = ApkMetaTranslator(ResourceTable(null), preferredLocale)
+                    val apkMetaTranslator = ApkMetaTranslator(ResourceTable(null), deviceConfig)
                     val binaryXmlParser = BinaryXmlParser(
                             ByteBuffer.wrap(manifestBytes),
                             ResourceTable(null),
                             apkMetaTranslator,
-                            preferredLocale
+                            deviceConfig
                     )
                     try {
                         binaryXmlParser.parse()
@@ -223,7 +224,7 @@ class ApkInfo(
             }
 
             return internalGetApkInfo(
-                    preferredLocale,
+                    deviceConfig,
                     baseFilter,
                     extraFilters,
                     requestParseManifestXmlTagForApkType,

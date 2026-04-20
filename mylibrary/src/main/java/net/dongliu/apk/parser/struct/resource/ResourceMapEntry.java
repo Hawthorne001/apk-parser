@@ -3,10 +3,10 @@ package net.dongliu.apk.parser.struct.resource;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import net.dongliu.apk.parser.bean.DeviceConfig;
 import net.dongliu.apk.parser.struct.ResourceValue;
 
 import java.util.Arrays;
-import java.util.Locale;
 
 /**
  * @author dongliu.
@@ -38,24 +38,22 @@ public class ResourceMapEntry extends ResourceEntry {
      */
     @Nullable
     @Override
-    public String toStringValue(final ResourceTable resourceTable, @Nullable final Locale locale) {
+    public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
         if (this.parent != 0 && resourceTable != null) {
 //            android.util.Log.d("AppLog", "label fetching: ResourceMapEntry " + this.key + " follows parent alias 0x" + Long.toHexString(this.parent));
-            String resolvedParent = ResourceValue.reference((int) this.parent).toStringValue(resourceTable, locale);
+            String resolvedParent = ResourceValue.reference((int) this.parent).toStringValue(resourceTable, config);
             if (resolvedParent != null && !resolvedParent.startsWith("resourceId:0x")) {
                 return resolvedParent;
             }
         }
 
-        if (this.resourceTableMaps.length > 0) {
-            for (ResourceTableMap map : this.resourceTableMaps) {
-                final ResourceValue resValue = map.getResValue();
-                if (resValue != null) {
-                    String val = resValue.toStringValue(resourceTable, locale);
-                    if (val != null) return val;
-                }
-                if (map.getData() != null) return map.getData();
+        for (ResourceTableMap map : this.resourceTableMaps) {
+            final ResourceValue resValue = map.getResValue();
+            if (resValue != null) {
+                String val = resValue.toStringValue(resourceTable, config);
+                if (val != null) return val;
             }
+            if (map.getData() != null) return map.getData();
         }
         return null;
     }
