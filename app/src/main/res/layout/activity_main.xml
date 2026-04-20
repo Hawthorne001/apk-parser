@@ -178,6 +178,15 @@
                 app:autoSizeMaxTextSize="20dp" app:autoSizeMinTextSize="12sp"
                 app:autoSizeTextType="uniform" tools:visibility="visible" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/goToComparisonButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/view_fetched_icons"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>

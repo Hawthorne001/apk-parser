@@ -18,4 +18,7 @@
     <string name="intro">This sample tries to parse all the APK files of all installed apps using the library, and compares it with what\'s expected from the Android framework.
 \nCheck the logs for more information about the process and the errors.</string>
 
+    <string name="view_fetched_icons">View Fetched Icons</string>
+    <string name="icon_comparison_header">Compare fetched icons (left) with framework icons (right). If they don\'t match, there might be a bug in the library\'s resource resolution.</string>
+    <string name="icon_comparison_title">Icon Comparison</string>
 </resources>

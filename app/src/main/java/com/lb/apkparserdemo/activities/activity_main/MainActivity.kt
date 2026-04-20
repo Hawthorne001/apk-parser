@@ -74,6 +74,7 @@ class MainActivity : BoundActivity<ActivityMainBinding>(ActivityMainBinding::inf
         }
         viewModel.isDoneLiveData.observe(this) { isDone ->
             binding.summaryTextView.isVisible = isDone
+            binding.goToComparisonButton.isVisible = isDone
             if (!isDone) {
                 binding.summaryNoteTextView.isVisible = false
                 return@observe
@@ -85,6 +86,9 @@ class MainActivity : BoundActivity<ActivityMainBinding>(ActivityMainBinding::inf
                             viewModel.failedGettingAppIconErrorsLiveData.value + viewModel.wrongPackageNameErrorsLiveData.value +
                             viewModel.wrongApkTypeErrorsLiveData.value + viewModel.parsingErrorsLiveData.value
             binding.summaryNoteTextView.isVisible = isSystemAppCountAllWeGot
+        }
+        binding.goToComparisonButton.setOnClickListener {
+            startActivity(Intent(this, com.lb.apkparserdemo.activities.comparison.ComparisonActivity::class.java))
         }
         addMenuProvider(object : MenuProvider {
             override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {

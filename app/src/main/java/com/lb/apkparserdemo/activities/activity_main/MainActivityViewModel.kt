@@ -3,10 +3,10 @@ package com.lb.apkparserdemo.activities.activity_main
 import android.app.Application
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.os.Build
 import android.util.Log
 import androidx.annotation.UiThread
-import androidx.annotation.WorkerThread
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.lb.apkparserdemo.apk_info.AbstractZipFilter
@@ -20,12 +20,14 @@ import com.lb.apkparserdemo.apk_info.app_icon.ApkIconFetcher
 import com.lb.apkparserdemo.apk_info.app_icon.AppInfoUtil
 import com.lb.apkparserdemo.apk_info.app_icon.getInstalledPackagesCompat
 import com.lb.apkparserdemo.apk_info.app_icon.isSystemApp
+import com.lb.apkparserdemo.db.AppDatabase
+import com.lb.apkparserdemo.db.AppIconInfo
+import com.lb.apkparserdemo.utils.IconStorage
 import com.lb.common_utils.BaseViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runInterruptible
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream
 import java.io.FileInputStream
 import java.util.Locale
@@ -52,6 +54,9 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
     val systemAppsErrorsCountLiveData = CounterMutableLiveData()
     val isDoneLiveData = MutableLiveData<Boolean>(false)
 
+    private val db = AppDatabase.getDatabase(application)
+    private val appIconDao = db.appIconDao()
+
     private var fetchAppInfoJob: Job? = null
     private val fetchAppInfoDispatcher: CoroutineDispatcher =
             Executors.newFixedThreadPool(1).asCoroutineDispatcher()
@@ -60,15 +65,12 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
     @UiThread
     fun init() {
         if (fetchAppInfoJob != null) return
-        fetchAppInfoJob = viewModelScope.launch {
-            runInterruptible(fetchAppInfoDispatcher) {
-                performTests()
-            }
+        fetchAppInfoJob = viewModelScope.launch(fetchAppInfoDispatcher) {
+            performTests()
         }
     }
 
-    @WorkerThread
-    private fun performTests() {
+    private suspend fun performTests() {
         val localeList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             val list = applicationContext.resources.configuration.locales
             val result = mutableListOf<Locale>()
@@ -140,9 +142,10 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                 continue
             }
             val currentApkInfo = apkInfo
+            var appIcon: Bitmap? = null
             if (VALIDATE_RESOURCES) {
                 //check if the library can get app icon, if required
-                val appIcon = ApkIconFetcher.getApkIcon(
+                appIcon = ApkIconFetcher.getApkIcon(
                         context, mainLocale, object : ApkIconFetcher.ZipFilterCreator {
                     override fun generateZipFilter(): AbstractZipFilter =
                             MultiZipFilter(allApkFilePaths.map { getZipFilter(it, ZIP_FILTER_TYPE) })
@@ -191,11 +194,13 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             }
             //compare app label using library vs framework
             val labelOfLibrary = apkMeta.label ?: apkMeta.packageName
+            val labelOfLibraryString = labelOfLibrary.toString()
             if (VALIDATE_RESOURCES) {
                 val expectedAppLabel = packageInfo.applicationInfo!!.loadLabel(packageManager)
-                if (expectedAppLabel != labelOfLibrary.toString()) {
+                if (expectedAppLabel != labelOfLibraryString) {
                     wrongLabelErrorsLiveData.inc()
-                    if (isSystemApp) systemAppsErrorsCountLiveData.inc()
+                    if (isSystemApp)
+                        systemAppsErrorsCountLiveData.inc()
                     Log.e("AppLog", "label mismatch for \"${packageName}\": correct=\"$expectedAppLabel\" vs found=\"$labelOfLibrary\" apks:${allApkFilePaths.joinToString()}")
                 }
 
@@ -203,11 +208,39 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                 val nonLocalizedLabelOfLibrary = currentApkInfo.apkMetaTranslator.nonLocalizedLabel
                 val nonLocalizedLabelOfFramework = packageInfo.applicationInfo?.nonLocalizedLabel?.toString()
                 if (nonLocalizedLabelOfFramework != nonLocalizedLabelOfLibrary) {
+                    wrongLabelErrorsLiveData.inc()
+                    if (isSystemApp)
+                        systemAppsErrorsCountLiveData.inc()
                     Log.e("AppLog", "nonLocalizedLabel mismatch for \"$packageName\": framework=\"$nonLocalizedLabelOfFramework\" library=\"$nonLocalizedLabelOfLibrary\"")
                 }
+                // Cache logic
+                val lastUpdateTime = packageInfo.lastUpdateTime
+                val cachedInfo = appIconDao.getByPackageName(packageName)
+                if (cachedInfo == null || cachedInfo.lastUpdateTime != lastUpdateTime) {
+                    // Update or insert
+                    if (cachedInfo != null) {
+                        IconStorage.deleteIcon(context, cachedInfo.iconFileName)
+                        IconStorage.deleteIcon(context, cachedInfo.frameworkIconFileName)
+                    }
+                    if (appIcon != null) {
+                        val libIconFileName = "${packageName}_library.png"
+                        val fwIconFileName = "${packageName}_framework.png"
+                        val savedLib = IconStorage.saveIcon(context, libIconFileName, appIcon)
 
-                // Get the default translation (usually from values/strings.xml)
-                currentApkInfo.apkMetaTranslator.getDefaultLabel()
+                        val frameworkIcon = try {
+                            packageManager.getApplicationIcon(packageInfo.applicationInfo!!)
+                        } catch (_: Exception) {
+                            null
+                        }
+                        val savedFw = if (frameworkIcon != null) {
+                            IconStorage.saveIcon(context, fwIconFileName, frameworkIcon)
+                        } else false
+
+                        if (savedLib && savedFw) {
+                            appIconDao.insert(AppIconInfo(packageName, labelOfLibraryString, lastUpdateTime, libIconFileName, fwIconFileName))
+                        }
+                    }
+                }
             }
             apkFilesHandledLiveData.inc()
             ++apksHandledSoFar
