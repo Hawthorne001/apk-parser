@@ -71,6 +71,8 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
     }
 
     private suspend fun performTests() {
+        appIconDao.deleteAll()
+        IconStorage.clearCache(applicationContext)
         val localeList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             val list = applicationContext.resources.configuration.locales
             val result = mutableListOf<Locale>()
@@ -90,12 +92,8 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-//                    it.add("com.google.android.odad")
-//                    it.add("com.google.android.cellbroadcastreceiver")
-//                    it.add("com.google.android.apps.pixel.dcservice")
-//                    it.add("com.google.android.photopicker")
-//                    it.add("com.google.android.storagemanager")
-
+//                    it.add("com.lb.lwp_plus")
+                    it.add(context.packageName)
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)

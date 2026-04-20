@@ -8,7 +8,7 @@ import androidx.room.Query
 
 @Dao
 interface AppIconDao {
-    @Query("SELECT * FROM app_icons")
+    @Query("SELECT * FROM app_icons ORDER BY appName ASC, packageName ASC")
     suspend fun getAll(): List<AppIconInfo>
 
     @Query("SELECT * FROM app_icons WHERE packageName = :packageName")
@@ -19,4 +19,7 @@ interface AppIconDao {
 
     @Delete
     suspend fun delete(appIconInfo: AppIconInfo)
+
+    @Query("DELETE FROM app_icons")
+    suspend fun deleteAll()
 }

@@ -65,6 +65,13 @@ object IconStorage {
         return File(File(context.filesDir, ICONS_DIR), fileName)
     }
 
+    fun clearCache(context: Context) {
+        val dir = File(context.filesDir, ICONS_DIR)
+        if (dir.exists()) {
+            dir.deleteRecursively()
+        }
+    }
+
     private fun drawableToBitmap(drawable: Drawable): Bitmap {
         if (drawable is BitmapDrawable) {
             return drawable.bitmap
