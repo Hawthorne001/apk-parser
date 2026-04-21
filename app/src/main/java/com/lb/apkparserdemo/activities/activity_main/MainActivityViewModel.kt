@@ -95,8 +95,12 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-//                    it.add("com.lb.lwp_plus")
-//                    it.add(context.packageName)
+                    it.add(context.packageName)
+                    it.add("com.android.dreams.basic")
+                    it.add("com.google.android.marvin.talkback")
+                    it.add("android")
+                    it.add("com.google.android.bluetooth")
+                    it.add("com.google.android.glasses.core")
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)

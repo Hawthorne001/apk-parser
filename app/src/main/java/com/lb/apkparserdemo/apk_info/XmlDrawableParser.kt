@@ -116,10 +116,10 @@ object XmlDrawableParser {
     }
 
     private class VectorDrawableStreamer(
-        private val context: Context,
-        private val apkInfo: ApkInfo,
-        private val deviceConfig: DeviceConfig?,
-        private val subResourceProvider: ((String) -> ByteArray?)?
+            private val context: Context,
+            private val apkInfo: ApkInfo,
+            private val deviceConfig: DeviceConfig?,
+            private val subResourceProvider: ((String) -> ByteArray?)?
     ) : XmlStreamer {
         var imageVector: ImageVector? = null
         var isVector = false
@@ -135,32 +135,35 @@ object XmlDrawableParser {
                     val height = attr.getString("height")?.parseDimension() ?: 24f
                     val viewportWidth = attr.getString("viewportWidth")?.toFloat() ?: width
                     val viewportHeight = attr.getString("viewportHeight")?.toFloat() ?: height
-                    
+
                     builder = ImageVector.Builder(
-                        name = attr.getString("name") ?: "vector",
-                        defaultWidth = width.dp,
-                        defaultHeight = height.dp,
-                        viewportWidth = viewportWidth,
-                        viewportHeight = viewportHeight,
-                        tintColor = attr.getString("tint")?.let { parseColor(context, it) } ?: Color.Unspecified,
-                        tintBlendMode = parseBlendMode(attr.getString("tintMode")),
-                        autoMirror = attr.getBoolean("autoMirrored", false)
+                            name = attr.getString("name") ?: "vector",
+                            defaultWidth = width.dp,
+                            defaultHeight = height.dp,
+                            viewportWidth = viewportWidth,
+                            viewportHeight = viewportHeight,
+                            tintColor = attr.getString("tint")?.let { parseColor(context, it) }
+                                    ?: Color.Unspecified,
+                            tintBlendMode = parseBlendMode(attr.getString("tintMode")),
+                            autoMirror = attr.getBoolean("autoMirrored", false)
                     )
                     extraGroupsStack.add(0)
                 }
+
                 "group" -> {
                     builder?.addGroup(
-                        name = attr.getString("name") ?: "",
-                        rotate = attr.getString("rotation")?.toFloat() ?: 0f,
-                        pivotX = attr.getString("pivotX")?.toFloat() ?: 0f,
-                        pivotY = attr.getString("pivotY")?.toFloat() ?: 0f,
-                        scaleX = attr.getString("scaleX")?.toFloat() ?: 1f,
-                        scaleY = attr.getString("scaleY")?.toFloat() ?: 1f,
-                        translationX = attr.getString("translateX")?.toFloat() ?: 0f,
-                        translationY = attr.getString("translateY")?.toFloat() ?: 0f
+                            name = attr.getString("name") ?: "",
+                            rotate = attr.getString("rotation")?.toFloat() ?: 0f,
+                            pivotX = attr.getString("pivotX")?.toFloat() ?: 0f,
+                            pivotY = attr.getString("pivotY")?.toFloat() ?: 0f,
+                            scaleX = attr.getString("scaleX")?.toFloat() ?: 1f,
+                            scaleY = attr.getString("scaleY")?.toFloat() ?: 1f,
+                            translationX = attr.getString("translateX")?.toFloat() ?: 0f,
+                            translationY = attr.getString("translateY")?.toFloat() ?: 0f
                     )
                     extraGroupsStack.add(0)
                 }
+
                 "inset" -> {
                     // Just a container for modern icons, let the parser continue to child tags
                     attr.getString("drawable")?.let { innerDrawable ->
@@ -174,37 +177,40 @@ object XmlDrawableParser {
                                     subParser.parse()
                                     subStreamer.imageVector?.let { subVector ->
                                         builder?.addPath(
-                                            pathData = subVector.root.map { if (it is VectorPath) it.pathData else emptyList() }.flatten(),
-                                            name = "inset_sub",
-                                            fill = SolidColor(Color.Transparent) // This is a hack, proper nested vector support is complex
+                                                pathData = subVector.root.map { if (it is VectorPath) it.pathData else emptyList() }.flatten(),
+                                                name = "inset_sub",
+                                                fill = SolidColor(Color.Transparent) // This is a hack, proper nested vector support is complex
                                         )
                                     }
-                                } catch (ignored: Exception) {}
+                                } catch (ignored: Exception) {
+                                }
                             }
                         }
                     }
                 }
+
                 "path" -> {
                     val pathData = attr.getString("pathData") ?: return
                     builder?.addPath(
-                        pathData = addPathNodes(pathData),
-                        name = attr.getString("name") ?: "",
-                        fill = attr.getString("fillColor")?.let { obtainBrush(context, it, apkInfo, deviceConfig, subResourceProvider) },
-                        fillAlpha = attr.getString("fillAlpha")?.toFloat() ?: 1f,
-                        stroke = attr.getString("strokeColor")?.let { obtainBrush(context, it, apkInfo, deviceConfig, subResourceProvider) },
-                        strokeAlpha = attr.getString("strokeAlpha")?.toFloat() ?: 1f,
-                        strokeLineWidth = attr.getString("strokeWidth")?.toFloat() ?: 0f,
-                        strokeLineCap = parseStrokeCap(attr.getString("strokeLineCap")),
-                        strokeLineJoin = parseStrokeJoin(attr.getString("strokeLineJoin")),
-                        strokeLineMiter = attr.getString("strokeMiterLimit")?.toFloat() ?: 4f,
-                        pathFillType = if (attr.getString("fillType") == "evenOdd" || attr.getString("fillType") == "1") PathFillType.EvenOdd else PathFillType.NonZero
+                            pathData = addPathNodes(pathData),
+                            name = attr.getString("name") ?: "",
+                            fill = attr.getString("fillColor")?.let { obtainBrush(context, it, apkInfo, deviceConfig, subResourceProvider) },
+                            fillAlpha = attr.getString("fillAlpha")?.toFloat() ?: 1f,
+                            stroke = attr.getString("strokeColor")?.let { obtainBrush(context, it, apkInfo, deviceConfig, subResourceProvider) },
+                            strokeAlpha = attr.getString("strokeAlpha")?.toFloat() ?: 1f,
+                            strokeLineWidth = attr.getString("strokeWidth")?.toFloat() ?: 0f,
+                            strokeLineCap = parseStrokeCap(attr.getString("strokeLineCap")),
+                            strokeLineJoin = parseStrokeJoin(attr.getString("strokeLineJoin")),
+                            strokeLineMiter = attr.getString("strokeMiterLimit")?.toFloat() ?: 4f,
+                            pathFillType = if (attr.getString("fillType") == "evenOdd" || attr.getString("fillType") == "1") PathFillType.EvenOdd else PathFillType.NonZero
                     )
                 }
+
                 "clip-path" -> {
                     val pathData = attr.getString("pathData") ?: return
                     builder?.addGroup(
-                        name = attr.getString("name") ?: "",
-                        clipPathData = addPathNodes(pathData)
+                            name = attr.getString("name") ?: "",
+                            clipPathData = addPathNodes(pathData)
                     )
                     if (extraGroupsStack.isNotEmpty()) {
                         extraGroupsStack[extraGroupsStack.size - 1]++
@@ -222,6 +228,7 @@ object XmlDrawableParser {
                     }
                     imageVector = builder?.build()
                 }
+
                 "group" -> {
                     if (extraGroupsStack.isNotEmpty()) {
                         val extras = extraGroupsStack.removeAt(extraGroupsStack.size - 1)
@@ -244,14 +251,15 @@ object XmlDrawableParser {
         val viewportHeight = parser.getAttributeValue(ns, "viewportHeight")?.toFloat() ?: height
 
         val builder = ImageVector.Builder(
-            name = parser.getAttributeValue(ns, "name") ?: "vector",
-            defaultWidth = width.dp,
-            defaultHeight = height.dp,
-            viewportWidth = viewportWidth,
-            viewportHeight = viewportHeight,
-            tintColor = parser.getAttributeValue(ns, "tint")?.let { parseColor(context, it) } ?: Color.Unspecified,
-            tintBlendMode = parseBlendMode(parser.getAttributeValue(ns, "tintMode")),
-            autoMirror = parser.getAttributeValue(ns, "autoMirrored")?.toBoolean() ?: false
+                name = parser.getAttributeValue(ns, "name") ?: "vector",
+                defaultWidth = width.dp,
+                defaultHeight = height.dp,
+                viewportWidth = viewportWidth,
+                viewportHeight = viewportHeight,
+                tintColor = parser.getAttributeValue(ns, "tint")?.let { parseColor(context, it) }
+                        ?: Color.Unspecified,
+                tintBlendMode = parseBlendMode(parser.getAttributeValue(ns, "tintMode")),
+                autoMirror = parser.getAttributeValue(ns, "autoMirrored")?.toBoolean() ?: false
         )
 
         val extraGroupsStack = mutableListOf<Int>()
@@ -263,35 +271,43 @@ object XmlDrawableParser {
                 when (parser.name) {
                     "group" -> {
                         builder.addGroup(
-                            name = parser.getAttributeValue(ns, "name") ?: "",
-                            rotate = parser.getAttributeValue(ns, "rotation")?.toFloat() ?: 0f,
-                            pivotX = parser.getAttributeValue(ns, "pivotX")?.toFloat() ?: 0f,
-                            pivotY = parser.getAttributeValue(ns, "pivotY")?.toFloat() ?: 0f,
-                            scaleX = parser.getAttributeValue(ns, "scaleX")?.toFloat() ?: 1f,
-                            scaleY = parser.getAttributeValue(ns, "scaleY")?.toFloat() ?: 1f,
-                            translationX = parser.getAttributeValue(ns, "translateX")?.toFloat() ?: 0f,
-                            translationY = parser.getAttributeValue(ns, "translateY")?.toFloat() ?: 0f
+                                name = parser.getAttributeValue(ns, "name") ?: "",
+                                rotate = parser.getAttributeValue(ns, "rotation")?.toFloat() ?: 0f,
+                                pivotX = parser.getAttributeValue(ns, "pivotX")?.toFloat() ?: 0f,
+                                pivotY = parser.getAttributeValue(ns, "pivotY")?.toFloat() ?: 0f,
+                                scaleX = parser.getAttributeValue(ns, "scaleX")?.toFloat() ?: 1f,
+                                scaleY = parser.getAttributeValue(ns, "scaleY")?.toFloat() ?: 1f,
+                                translationX = parser.getAttributeValue(ns, "translateX")?.toFloat()
+                                        ?: 0f,
+                                translationY = parser.getAttributeValue(ns, "translateY")?.toFloat()
+                                        ?: 0f
                         )
                         extraGroupsStack.add(0)
                     }
+
                     "path" -> {
                         val pathData = parser.getAttributeValue(ns, "pathData")
                         if (pathData != null) {
                             builder.addPath(
-                                pathData = addPathNodes(pathData),
-                                name = parser.getAttributeValue(ns, "name") ?: "",
-                                fill = parser.getAttributeValue(ns, "fillColor")?.let { obtainBrush(context, it) },
-                                fillAlpha = parser.getAttributeValue(ns, "fillAlpha")?.toFloat() ?: 1f,
-                                stroke = parser.getAttributeValue(ns, "strokeColor")?.let { obtainBrush(context, it) },
-                                strokeAlpha = parser.getAttributeValue(ns, "strokeAlpha")?.toFloat() ?: 1f,
-                                strokeLineWidth = parser.getAttributeValue(ns, "strokeWidth")?.toFloat() ?: 0f,
-                                strokeLineCap = parseStrokeCap(parser.getAttributeValue(ns, "strokeLineCap")),
-                                strokeLineJoin = parseStrokeJoin(parser.getAttributeValue(ns, "strokeLineJoin")),
-                                strokeLineMiter = parser.getAttributeValue(ns, "strokeMiterLimit")?.toFloat() ?: 4f,
-                                pathFillType = if (parser.getAttributeValue(ns, "fillType") == "evenOdd") PathFillType.EvenOdd else PathFillType.NonZero
+                                    pathData = addPathNodes(pathData),
+                                    name = parser.getAttributeValue(ns, "name") ?: "",
+                                    fill = parser.getAttributeValue(ns, "fillColor")?.let { obtainBrush(context, it) },
+                                    fillAlpha = parser.getAttributeValue(ns, "fillAlpha")?.toFloat()
+                                            ?: 1f,
+                                    stroke = parser.getAttributeValue(ns, "strokeColor")?.let { obtainBrush(context, it) },
+                                    strokeAlpha = parser.getAttributeValue(ns, "strokeAlpha")?.toFloat()
+                                            ?: 1f,
+                                    strokeLineWidth = parser.getAttributeValue(ns, "strokeWidth")?.toFloat()
+                                            ?: 0f,
+                                    strokeLineCap = parseStrokeCap(parser.getAttributeValue(ns, "strokeLineCap")),
+                                    strokeLineJoin = parseStrokeJoin(parser.getAttributeValue(ns, "strokeLineJoin")),
+                                    strokeLineMiter = parser.getAttributeValue(ns, "strokeMiterLimit")?.toFloat()
+                                            ?: 4f,
+                                    pathFillType = if (parser.getAttributeValue(ns, "fillType") == "evenOdd") PathFillType.EvenOdd else PathFillType.NonZero
                             )
                         }
                     }
+
                     "clip-path" -> {
                         val pathData = parser.getAttributeValue(ns, "pathData")
                         if (pathData != null) {
@@ -324,7 +340,15 @@ object XmlDrawableParser {
         val canvas = Canvas(android.graphics.Canvas(bitmap))
         val drawScope = CanvasDrawScope()
         drawScope.draw(density, LayoutDirection.Ltr, canvas, androidx.compose.ui.geometry.Size(widthPx.toFloat(), heightPx.toFloat())) {
-            renderVectorGroup(imageVector.root)
+            withTransform({
+                scale(
+                        scaleX = widthPx.toFloat() / imageVector.viewportWidth,
+                        scaleY = heightPx.toFloat() / imageVector.viewportHeight,
+                        pivot = androidx.compose.ui.geometry.Offset.Zero
+                )
+            }) {
+                renderVectorGroup(imageVector.root)
+            }
         }
         return BitmapDrawable(context.resources, bitmap)
     }
@@ -342,25 +366,26 @@ object XmlDrawableParser {
                         addPathNodesToPath(node.pathData, path)
                         path.fillType = node.pathFillType
                         drawPath(
-                            path = path,
-                            brush = node.fill ?: SolidColor(Color.Transparent),
-                            alpha = node.fillAlpha,
-                            style = Fill
+                                path = path,
+                                brush = node.fill ?: SolidColor(Color.Transparent),
+                                alpha = node.fillAlpha,
+                                style = Fill
                         )
                         if (node.stroke != null && node.strokeLineWidth > 0) {
                             drawPath(
-                                path = path,
-                                brush = node.stroke!!,
-                                alpha = node.strokeAlpha,
-                                style = Stroke(
-                                    width = node.strokeLineWidth,
-                                    cap = node.strokeLineCap,
-                                    join = node.strokeLineJoin,
-                                    miter = node.strokeLineMiter
-                                )
+                                    path = path,
+                                    brush = node.stroke!!,
+                                    alpha = node.strokeAlpha,
+                                    style = Stroke(
+                                            width = node.strokeLineWidth,
+                                            cap = node.strokeLineCap,
+                                            join = node.strokeLineJoin,
+                                            miter = node.strokeLineMiter
+                                    )
                             )
                         }
                     }
+
                     is VectorGroup -> renderVectorGroup(node)
                 }
             }
@@ -380,6 +405,7 @@ object XmlDrawableParser {
                     currentY = segmentY
                     path.close()
                 }
+
                 is PathNode.MoveTo -> {
                     currentX = node.x
                     currentY = node.y
@@ -387,6 +413,7 @@ object XmlDrawableParser {
                     segmentY = node.y
                     path.moveTo(node.x, node.y)
                 }
+
                 is PathNode.RelativeMoveTo -> {
                     currentX += node.dx
                     currentY += node.dy
@@ -394,62 +421,75 @@ object XmlDrawableParser {
                     segmentY = currentY
                     path.relativeMoveTo(node.dx, node.dy)
                 }
+
                 is PathNode.LineTo -> {
                     currentX = node.x
                     currentY = node.y
                     path.lineTo(node.x, node.y)
                 }
+
                 is PathNode.RelativeLineTo -> {
                     currentX += node.dx
                     currentY += node.dy
                     path.relativeLineTo(node.dx, node.dy)
                 }
+
                 is PathNode.HorizontalTo -> {
                     currentX = node.x
                     path.lineTo(node.x, currentY)
                 }
+
                 is PathNode.RelativeHorizontalTo -> {
                     currentX += node.dx
                     path.relativeLineTo(node.dx, 0f)
                 }
+
                 is PathNode.VerticalTo -> {
                     currentY = node.y
                     path.lineTo(currentX, node.y)
                 }
+
                 is PathNode.RelativeVerticalTo -> {
                     currentY += node.dy
                     path.relativeLineTo(0f, node.dy)
                 }
+
                 is PathNode.CurveTo -> {
                     path.cubicTo(node.x1, node.y1, node.x2, node.y2, node.x3, node.y3)
                     currentX = node.x3
                     currentY = node.y3
                 }
+
                 is PathNode.RelativeCurveTo -> {
                     path.relativeCubicTo(node.dx1, node.dy1, node.dx2, node.dy2, node.dx3, node.dy3)
                     currentX += node.dx3
                     currentY += node.dy3
                 }
+
                 is PathNode.QuadTo -> {
                     path.quadraticTo(node.x1, node.y1, node.x2, node.y2)
                     currentX = node.x2
                     currentY = node.y2
                 }
+
                 is PathNode.RelativeQuadTo -> {
                     path.relativeQuadraticTo(node.dx1, node.dy1, node.dx2, node.dy2)
                     currentX += node.dx2
                     currentY += node.dy2
                 }
+
                 is PathNode.ArcTo -> {
                     // Simplified ArcTo: path.arcTo(rect, start, sweep, false) is available in Compose
                     // but SVG parameters are different. Skip for now.
                 }
+
                 else -> {}
             }
         }
     }
 
-    private fun String.parseDimension(): Float = filter { it.isDigit() || it == '.' || it == '-' }.toFloatOrNull() ?: 0f
+    private fun String.parseDimension(): Float = filter { it.isDigit() || it == '.' || it == '-' }.toFloatOrNull()
+            ?: 0f
 
     private fun parseColor(context: Context, colorStr: String): Color {
         return try {
@@ -462,19 +502,21 @@ object XmlDrawableParser {
                     Color(color)
                 } else Color.Transparent
             } else Color.Transparent
-        } catch (e: Exception) { Color.Transparent }
+        } catch (e: Exception) {
+            Color.Transparent
+        }
     }
 
     private fun obtainBrush(
-        context: Context,
-        colorStr: String,
-        apkInfo: ApkInfo? = null,
-        deviceConfig: DeviceConfig? = null,
-        subResourceProvider: ((String) -> ByteArray?)? = null
+            context: Context,
+            colorStr: String,
+            apkInfo: ApkInfo? = null,
+            deviceConfig: DeviceConfig? = null,
+            subResourceProvider: ((String) -> ByteArray?)? = null
     ): Brush? {
         val color = parseColor(context, colorStr)
         if (color != Color.Transparent) return SolidColor(color)
-        
+
         if (colorStr.endsWith(".xml") && subResourceProvider != null && apkInfo != null) {
             android.util.Log.d("AppLog", "icon fetching: attempting to parse complex color: $colorStr")
             val bytes = subResourceProvider(colorStr)
@@ -488,11 +530,11 @@ object XmlDrawableParser {
     }
 
     private fun tryParseComplexColor(
-        context: Context,
-        bytes: ByteArray,
-        apkInfo: ApkInfo,
-        deviceConfig: DeviceConfig?,
-        subResourceProvider: ((String) -> ByteArray?)?
+            context: Context,
+            bytes: ByteArray,
+            apkInfo: ApkInfo,
+            deviceConfig: DeviceConfig?,
+            subResourceProvider: ((String) -> ByteArray?)?
     ): Brush? {
         val streamer = GradientStreamer(context, apkInfo, deviceConfig, subResourceProvider)
         val parser = BinaryXmlParser(ByteBuffer.wrap(bytes), apkInfo.resourceTable, streamer, deviceConfig)
@@ -511,10 +553,10 @@ object XmlDrawableParser {
     }
 
     private class GradientStreamer(
-        private val context: Context,
-        private val apkInfo: ApkInfo,
-        private val deviceConfig: DeviceConfig?,
-        private val subResourceProvider: ((String) -> ByteArray?)?
+            private val context: Context,
+            private val apkInfo: ApkInfo,
+            private val deviceConfig: DeviceConfig?,
+            private val subResourceProvider: ((String) -> ByteArray?)?
     ) : XmlStreamer {
         var brush: Brush? = null
         private var type: String? = null
@@ -536,8 +578,10 @@ object XmlDrawableParser {
             when (tag.name) {
                 "gradient" -> {
                     type = attr.getString("type") ?: "linear"
-                    startColor = attr.getString("startColor")?.let { parseColor(context, it) } ?: Color.Transparent
-                    endColor = attr.getString("endColor")?.let { parseColor(context, it) } ?: Color.Transparent
+                    startColor = attr.getString("startColor")?.let { parseColor(context, it) }
+                            ?: Color.Transparent
+                    endColor = attr.getString("endColor")?.let { parseColor(context, it) }
+                            ?: Color.Transparent
                     centerColor = attr.getString("centerColor")?.let { parseColor(context, it) }
                     startX = attr.getString("startX")?.toFloat() ?: 0f
                     startY = attr.getString("startY")?.toFloat() ?: 0f
@@ -547,6 +591,7 @@ object XmlDrawableParser {
                     centerY = attr.getString("centerY")?.toFloat() ?: 0f
                     gradientRadius = attr.getString("gradientRadius")?.toFloat() ?: 0f
                 }
+
                 "item" -> {
                     val offset = attr.getString("offset")?.toFloat() ?: 0f
                     val colorStr = attr.getString("color")
@@ -564,26 +609,29 @@ object XmlDrawableParser {
         override fun onEndTag(tag: XmlNodeEndTag) {
             if (tag.name == "gradient") {
                 val finalColors = if (colors.isNotEmpty()) colors else {
-                    centerColor?.let { listOf(startColor, it, endColor) } ?: listOf(startColor, endColor)
+                    centerColor?.let { listOf(startColor, it, endColor) }
+                            ?: listOf(startColor, endColor)
                 }
                 val finalStops = if (stops.isNotEmpty()) stops else {
                     if (centerColor != null) listOf(0f, 0.5f, 1f) else listOf(0f, 1f)
                 }
-                
+
                 brush = when (type) {
                     "radial" -> Brush.radialGradient(
-                        colorStops = finalStops.zip(finalColors).toTypedArray(),
-                        center = androidx.compose.ui.geometry.Offset(centerX, centerY),
-                        radius = gradientRadius
+                            colorStops = finalStops.zip(finalColors).toTypedArray(),
+                            center = androidx.compose.ui.geometry.Offset(centerX, centerY),
+                            radius = gradientRadius
                     )
+
                     "sweep" -> Brush.sweepGradient(
-                        colorStops = finalStops.zip(finalColors).toTypedArray(),
-                        center = androidx.compose.ui.geometry.Offset(centerX, centerY)
+                            colorStops = finalStops.zip(finalColors).toTypedArray(),
+                            center = androidx.compose.ui.geometry.Offset(centerX, centerY)
                     )
+
                     else -> Brush.linearGradient(
-                        colorStops = finalStops.zip(finalColors).toTypedArray(),
-                        start = androidx.compose.ui.geometry.Offset(startX, startY),
-                        end = androidx.compose.ui.geometry.Offset(endX, endY)
+                            colorStops = finalStops.zip(finalColors).toTypedArray(),
+                            start = androidx.compose.ui.geometry.Offset(startX, startY),
+                            end = androidx.compose.ui.geometry.Offset(endX, endY)
                     )
                 }
             }

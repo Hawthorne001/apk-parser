@@ -238,11 +238,11 @@ object ApkIconFetcher {
                         android.util.Log.d("AppLog", "icon fetching: retrieved ${byteArrayForEntries.size} entries for adaptive icon layers")
 
                         val backgroundDrawables = backgroundPaths.mapNotNull { p ->
-                            fetchDrawable(context, p, byteArrayForEntries[p], apkInfo, deviceConfig, filterGenerator, requestedAppIconSize)
+                            fetchDrawable(context, p, byteArrayForEntries[p], apkInfo, deviceConfig, filterGenerator, 0)
                         }
 
                         val foregroundDrawables = foregroundPaths.mapNotNull { p ->
-                            fetchDrawable(context, p, byteArrayForEntries[p], apkInfo, deviceConfig, filterGenerator, requestedAppIconSize)
+                            fetchDrawable(context, p, byteArrayForEntries[p], apkInfo, deviceConfig, filterGenerator, 0)
                         }
 
                         if (foregroundDrawables.isNotEmpty()) {
@@ -271,7 +271,7 @@ object ApkIconFetcher {
                         val pathsToFetch = drawablesPaths.filter { isZipPath(it) }.toHashSet()
                         val byteArrayForEntries = if (pathsToFetch.isNotEmpty()) filter.getByteArrayForEntries(emptySet(), pathsToFetch) ?: emptyMap() else emptyMap()
                         val drawables = drawablesPaths.mapNotNull { layerPath ->
-                            fetchDrawable(context, layerPath, byteArrayForEntries[layerPath], apkInfo, deviceConfig, filterGenerator, requestedAppIconSize)
+                            fetchDrawable(context, layerPath, byteArrayForEntries[layerPath], apkInfo, deviceConfig, filterGenerator, 0)
                         }
                         if (drawables.isNotEmpty()) {
                             return LayerDrawable(drawables.toTypedArray())
@@ -288,7 +288,7 @@ object ApkIconFetcher {
                 if (!innerPath.isNullOrBlank()) {
                     filterGenerator.generateZipFilter().use { filter ->
                         val srcBytes = if (isZipPath(innerPath)) filter.getByteArrayForEntries(hashSetOf(innerPath))?.get(innerPath) else null
-                        val drawable = fetchDrawable(context, innerPath, srcBytes, apkInfo, deviceConfig, filterGenerator, requestedAppIconSize)
+                        val drawable = fetchDrawable(context, innerPath, srcBytes, apkInfo, deviceConfig, filterGenerator, 0)
                         if (drawable != null) {
                             // Apply tint if present in the wrapper tag
                             // For now just return the drawable, but we could wrap it in another one if needed
