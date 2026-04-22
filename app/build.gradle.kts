@@ -1,14 +1,14 @@
+import com.android.build.api.dsl.ApplicationExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     id("com.android.application")
-    kotlin("android")
-    kotlin("kapt")
+    id("com.google.devtools.ksp") version "2.3.6"
     id("org.jetbrains.kotlin.plugin.compose") version "2.3.20"
 }
 
-android {
+extensions.configure<ApplicationExtension> {
     namespace = "com.lb.apkparserdemo"
     compileSdk = 37
 
@@ -31,14 +31,15 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    tasks.withType<KotlinJvmCompile>().configureEach {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_17)
-        }
-    }
     buildFeatures {
         viewBinding = true
         compose = true
+    }
+}
+
+tasks.withType<KotlinJvmCompile>().configureEach {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
@@ -71,10 +72,10 @@ dependencies {
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
     // Room
-    val roomVersion = "2.7.0-alpha13"
+    val roomVersion = "2.8.4"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
-    kapt("androidx.room:room-compiler:$roomVersion")
+    ksp("androidx.room:room-compiler:$roomVersion")
 
     // Coil
     implementation("io.coil-kt:coil:2.7.0")

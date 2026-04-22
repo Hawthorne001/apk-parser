@@ -1,13 +1,13 @@
+import com.android.build.api.dsl.LibraryExtension
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     id("com.android.library")
-    kotlin("android")
     id("maven-publish")
 }
 
-android {
+extensions.configure<LibraryExtension> {
     namespace = "net.dongliu.apk.parser"
     compileSdk = 37
 
@@ -31,11 +31,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    tasks.withType<KotlinJvmCompile>().configureEach {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_17)
-        }
-    }
     publishing {
         singleVariant("release") {
             withSourcesJar()
@@ -44,6 +39,11 @@ android {
     }
 }
 
+tasks.withType<KotlinJvmCompile>().configureEach {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+    }
+}
 
 dependencies {
     implementation(fileTree("libs") { include("*.jar") })
