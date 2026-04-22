@@ -244,11 +244,27 @@ public abstract class ResourceValue {
             }
 
             // 3. Density
-            int candidateDensity = densityLevel(candidate.type.density);
-            int currentDensity = densityLevel(current.type.density);
-            if (candidateDensity != currentDensity) {
-                // Higher density wins as a tie-breaker.
-                return candidateDensity > currentDensity;
+            if (requestedConfig != null && requestedConfig.getDensity() > 0) {
+                int reqDensity = requestedConfig.getDensity();
+                int candDensity = candidate.type.density;
+                int curDensity = current.type.density;
+                
+                if (candDensity != curDensity) {
+                    if (candDensity == Densities.ANY) return true;
+                    if (curDensity == Densities.ANY) return false;
+                    
+                    int candidateDiff = Math.abs(candDensity - reqDensity);
+                    int currentDiff = Math.abs(curDensity - reqDensity);
+                    if (candidateDiff != currentDiff) {
+                        return candidateDiff < currentDiff;
+                    }
+                }
+            } else {
+                int candidateDensity = densityLevel(candidate.type.density);
+                int currentDensity = densityLevel(current.type.density);
+                if (candidateDensity != currentDensity) {
+                    return candidateDensity > currentDensity;
+                }
             }
 
             // If everything else is same, stick with first one (Base APK usually)

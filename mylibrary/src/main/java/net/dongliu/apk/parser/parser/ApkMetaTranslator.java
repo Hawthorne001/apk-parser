@@ -20,6 +20,7 @@ import net.dongliu.apk.parser.struct.xml.XmlNamespaceEndTag;
 import net.dongliu.apk.parser.struct.xml.XmlNamespaceStartTag;
 import net.dongliu.apk.parser.struct.xml.XmlNodeEndTag;
 import net.dongliu.apk.parser.struct.xml.XmlNodeStartTag;
+import net.dongliu.apk.parser.utils.Locales;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -258,10 +259,10 @@ public class ApkMetaTranslator implements XmlStreamer {
         java.util.Map<Locale, ResourceTable.Resource> bestResources = new java.util.HashMap<>();
 
         for (ResourceTable.Resource resource : resources) {
-            String value = resource.resourceEntry.toStringValue(this.resourceTable, DeviceConfig.defaultLocale(resource.type.locale));
+            String value = resource.resourceEntry.toStringValue(this.resourceTable, this.deviceConfig);
             if (value != null && !value.startsWith("resourceId:0x")) {
                 ResourceTable.Resource currentBest = bestResources.get(resource.type.locale);
-                if (currentBest == null || isBetterThan(resource, currentBest, null)) {
+                if (currentBest == null || isBetterThan(resource, currentBest, this.deviceConfig)) {
                     bestResources.put(resource.type.locale, resource);
                     map.put(resource.type.locale, value);
                 }
@@ -292,12 +293,43 @@ public class ApkMetaTranslator implements XmlStreamer {
         if (candidate.type.config.getSdkVersion() != current.type.config.getSdkVersion()) {
             return candidate.type.config.getSdkVersion() > current.type.config.getSdkVersion();
         }
+
+        if (requestedConfig != null && requestedConfig.getDensity() > 0) {
+            int reqDensity = requestedConfig.getDensity();
+            int candDensity = candidate.type.density;
+            int curDensity = current.type.density;
+            
+            if (candDensity != curDensity) {
+                if (candDensity == Densities.ANY) return true;
+                if (curDensity == Densities.ANY) return false;
+                
+                int candidateDiff = Math.abs(candDensity - reqDensity);
+                int currentDiff = Math.abs(curDensity - reqDensity);
+                if (candidateDiff != currentDiff) {
+                    return candidateDiff < currentDiff;
+                }
+            }
+        } else {
+            int candidateDensity = densityLevel(candidate.type.density);
+            int currentDensity = densityLevel(current.type.density);
+            if (candidateDensity != currentDensity) {
+                return candidateDensity > currentDensity;
+            }
+        }
+
         return false;
+    }
+
+    private static int densityLevel(final int density) {
+        if (density == Densities.ANY || density == Densities.NONE) {
+            return -1;
+        }
+        return density;
     }
 
     @NonNull
     public String getLabel(@Nullable Locale locale) {
-        return getLabel(locale != null ? DeviceConfig.defaultLocale(locale) : null);
+        return getLabel(locale != null ? DeviceConfig.create(locale, 0, 0, 0) : null);
     }
 
     @NonNull
@@ -371,25 +403,40 @@ public class ApkMetaTranslator implements XmlStreamer {
         }
 
         final List<IconPath> icons = new ArrayList<>();
-        boolean hasDefault = false;
+        
+        // Find the best match for the current configuration
+        ResourceTable.Resource bestMatch = null;
+        int maxScore = -1;
+
         for (final ResourceTable.Resource resource : resources) {
-            final ResourceEntry resourceEntry = resource.resourceEntry;
+            int score = Locales.match(this.deviceConfig, resource);
+            if (score > maxScore) {
+                bestMatch = resource;
+                maxScore = score;
+            } else if (score == maxScore && score >= 0) {
+                // Precedence: Version -> Density
+                if (isBetterThan(resource, bestMatch, this.deviceConfig)) {
+                    bestMatch = resource;
+                }
+            }
+        }
+
+        if (bestMatch != null) {
+            final ResourceEntry resourceEntry = bestMatch.resourceEntry;
             if (resourceEntry.value instanceof ResourceValue.ReferenceResourceValue) {
                 long nextId = ((ResourceValue.ReferenceResourceValue) resourceEntry.value).getReferenceResourceId();
                 icons.addAll(extractIconPathsById(nextId, attrName, visitedIds));
             } else {
-                final String path = resourceEntry.toStringValue(this.resourceTable, (DeviceConfig) null);
-                if (path == null) continue;
-                if (resource.type.density == Densities.DEFAULT) {
-                    hasDefault = true;
-                    updateApkMetaIcon(path, attrName);
+                final String path = resourceEntry.toStringValue(this.resourceTable, this.deviceConfig);
+                if (path != null) {
+                    if (bestMatch.type.density == Densities.DEFAULT || bestMatch.type.density == Densities.ANY) {
+                        updateApkMetaIcon(path, attrName);
+                    }
+                    icons.add(new IconPath(path, bestMatch.type.density));
                 }
-                icons.add(new IconPath(path, resource.type.density));
             }
         }
-        if (!hasDefault && !icons.isEmpty()) {
-            updateApkMetaIcon(icons.get(0).path, attrName);
-        }
+
         return icons;
     }
 

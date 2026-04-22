@@ -87,7 +87,8 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         }
 //        Locales.matcher=SystemLocaleMatcher()
         val mainLocale = localeList.firstOrNull()
-        val deviceConfig = DeviceConfig.create(mainLocale, config.mcc, config.mnc)
+        val densityDpi = applicationContext.resources.displayMetrics.densityDpi
+        val deviceConfig = DeviceConfig.create(mainLocale, config.mcc, config.mnc, densityDpi)
         val context = applicationContext
         val appIconSize = AppInfoUtil.getAppIconSize(context)
         val packageManager = context.packageManager

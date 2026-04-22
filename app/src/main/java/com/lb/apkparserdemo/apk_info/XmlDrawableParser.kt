@@ -25,8 +25,11 @@ import org.xmlpull.v1.XmlPullParser
 import java.io.StringReader
 import java.nio.ByteBuffer
 import java.util.*
+import kotlin.math.*
 
 object XmlDrawableParser {
+
+    class VectorBitmapDrawable(context: Context, bitmap: Bitmap) : BitmapDrawable(context.resources, bitmap)
 
     fun tryParseDrawable(context: Context, binXml: ByteArray, apkInfo: ApkInfo, deviceConfig: DeviceConfig?, subResourceProvider: ((String) -> ByteArray?)? = null): Drawable? {
         android.util.Log.d("AppLog", "icon fetching: tryParseDrawable (Binary)")
@@ -350,7 +353,7 @@ object XmlDrawableParser {
                 renderVectorGroup(imageVector.root)
             }
         }
-        return BitmapDrawable(context.resources, bitmap)
+        return VectorBitmapDrawable(context, bitmap)
     }
 
     private fun androidx.compose.ui.graphics.drawscope.DrawScope.renderVectorGroup(group: VectorGroup) {
@@ -397,8 +400,12 @@ object XmlDrawableParser {
         var currentY = 0f
         var segmentX = 0f
         var segmentY = 0f
+        var lastControlX = 0f
+        var lastControlY = 0f
 
         for (node in nodes) {
+            var nextControlX = 0f
+            var nextControlY = 0f
             when (node) {
                 is PathNode.Close -> {
                     currentX = segmentX
@@ -456,37 +463,215 @@ object XmlDrawableParser {
 
                 is PathNode.CurveTo -> {
                     path.cubicTo(node.x1, node.y1, node.x2, node.y2, node.x3, node.y3)
+                    nextControlX = node.x2
+                    nextControlY = node.y2
                     currentX = node.x3
                     currentY = node.y3
                 }
 
                 is PathNode.RelativeCurveTo -> {
                     path.relativeCubicTo(node.dx1, node.dy1, node.dx2, node.dy2, node.dx3, node.dy3)
+                    nextControlX = currentX + node.dx2
+                    nextControlY = currentY + node.dy2
                     currentX += node.dx3
                     currentY += node.dy3
                 }
 
                 is PathNode.QuadTo -> {
                     path.quadraticTo(node.x1, node.y1, node.x2, node.y2)
+                    nextControlX = node.x1
+                    nextControlY = node.y1
                     currentX = node.x2
                     currentY = node.y2
                 }
 
                 is PathNode.RelativeQuadTo -> {
                     path.relativeQuadraticTo(node.dx1, node.dy1, node.dx2, node.dy2)
+                    nextControlX = currentX + node.dx1
+                    nextControlY = currentY + node.dy1
                     currentX += node.dx2
                     currentY += node.dy2
                 }
 
                 is PathNode.ArcTo -> {
-                    // Simplified ArcTo: path.arcTo(rect, start, sweep, false) is available in Compose
-                    // but SVG parameters are different. Skip for now.
+                    drawArc(
+                            path,
+                            currentX.toDouble(),
+                            currentY.toDouble(),
+                            node.arcStartX.toDouble(),
+                            node.arcStartY.toDouble(),
+                            node.horizontalEllipseRadius.toDouble(),
+                            node.verticalEllipseRadius.toDouble(),
+                            node.theta.toDouble(),
+                            node.isMoreThanHalf,
+                            node.isPositiveArc
+                    )
+                    currentX = node.arcStartX
+                    currentY = node.arcStartY
                 }
 
-                else -> {}
+                is PathNode.RelativeArcTo -> {
+                    val nextX = currentX + node.arcStartDx
+                    val nextY = currentY + node.arcStartDy
+                    drawArc(
+                            path,
+                            currentX.toDouble(),
+                            currentY.toDouble(),
+                            nextX.toDouble(),
+                            nextY.toDouble(),
+                            node.horizontalEllipseRadius.toDouble(),
+                            node.verticalEllipseRadius.toDouble(),
+                            node.theta.toDouble(),
+                            node.isMoreThanHalf,
+                            node.isPositiveArc
+                    )
+                    currentX = nextX
+                    currentY = nextY
+                }
+                is PathNode.ReflectiveCurveTo -> {
+                    val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX
+                    val cy = if (lastControlY.isNaN()) currentY else 2 * currentY - lastControlY
+                    path.cubicTo(cx, cy, node.x1, node.y1, node.x2, node.y2)
+                    nextControlX = node.x1
+                    nextControlY = node.y1
+                    currentX = node.x2
+                    currentY = node.y2
+                }
+                is PathNode.RelativeReflectiveCurveTo -> {
+                    val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX
+                    val cy = if (lastControlY.isNaN()) currentY else 2 * currentY - lastControlY
+                    path.cubicTo(cx, cy, currentX + node.dx1, currentY + node.dy1, currentX + node.dx2, currentY + node.dy2)
+                    nextControlX = currentX + node.dx1
+                    nextControlY = currentY + node.dy1
+                    currentX += node.dx2
+                    currentY += node.dy2
+                }
+                is PathNode.ReflectiveQuadTo -> {
+                    val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX
+                    val cy = if (lastControlY.isNaN()) currentY else 2 * currentY - lastControlY
+                    path.quadraticTo(cx, cy, node.x, node.y)
+                    nextControlX = cx
+                    nextControlY = cy
+                    currentX = node.x
+                    currentY = node.y
+                }
+                is PathNode.RelativeReflectiveQuadTo -> {
+                    val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX
+                    val cy = if (lastControlY.isNaN()) currentY else 2 * currentY - lastControlY
+                    path.quadraticTo(cx, cy, currentX + node.dx, currentY + node.dy)
+                    nextControlX = cx
+                    nextControlY = cy
+                    currentX += node.dx
+                    currentY += node.dy
+                }
+            }
+            lastControlX = if (node is PathNode.CurveTo || node is PathNode.RelativeCurveTo ||
+                node is PathNode.QuadTo || node is PathNode.RelativeQuadTo ||
+                node is PathNode.ReflectiveCurveTo || node is PathNode.RelativeReflectiveCurveTo ||
+                node is PathNode.ReflectiveQuadTo || node is PathNode.RelativeReflectiveQuadTo) {
+                nextControlX
+            } else {
+                Float.NaN
+            }
+            lastControlY = if (node is PathNode.CurveTo || node is PathNode.RelativeCurveTo ||
+                node is PathNode.QuadTo || node is PathNode.RelativeQuadTo ||
+                node is PathNode.ReflectiveCurveTo || node is PathNode.RelativeReflectiveCurveTo ||
+                node is PathNode.ReflectiveQuadTo || node is PathNode.RelativeReflectiveQuadTo) {
+                nextControlY
+            } else {
+                Float.NaN
             }
         }
     }
+
+    private fun drawArc(
+            path: Path,
+            x0: Double, y0: Double,
+            x1: Double, y1: Double,
+            a: Double, b: Double,
+            theta: Double,
+            isLargeArc: Boolean,
+            isSweep: Boolean
+    ) {
+        val thetaRad = Math.toRadians(theta)
+        val cosTheta = cos(thetaRad)
+        val sinTheta = sin(thetaRad)
+
+        val dx2 = (x0 - x1) / 2.0
+        val dy2 = (y0 - y1) / 2.0
+        val x1p = cosTheta * dx2 + sinTheta * dy2
+        val y1p = -sinTheta * dx2 + cosTheta * dy2
+
+        var rx = abs(a)
+        var ry = abs(b)
+        val lambda = (x1p * x1p) / (rx * rx) + (y1p * y1p) / (ry * ry)
+        if (lambda > 1.0) {
+            rx *= sqrt(lambda)
+            ry *= sqrt(lambda)
+        }
+
+        val rxSq = rx * rx
+        val rySq = ry * ry
+        val x1pSq = x1p * x1p
+        val y1pSq = y1p * y1p
+
+        var radicand = (rxSq * rySq - rxSq * y1pSq - rySq * x1pSq) / (rxSq * y1pSq + rySq * x1pSq)
+        radicand = max(0.0, radicand)
+        val coef = (if (isLargeArc == isSweep) -1.0 else 1.0) * sqrt(radicand)
+        val cxp = coef * ((rx * y1p) / ry)
+        val cyp = coef * (-(ry * x1p) / rx)
+
+        val cx = cosTheta * cxp - sinTheta * cyp + (x0 + x1) / 2.0
+        val cy = sinTheta * cxp + cosTheta * cyp + (y0 + y1) / 2.0
+
+        val ux = (x1p - cxp) / rx
+        val uy = (y1p - cyp) / ry
+        val vx = (-x1p - cxp) / rx
+        val vy = (-y1p - cyp) / ry
+
+        fun angle(ux: Double, uy: Double, vx: Double, vy: Double): Double {
+            val dot = ux * vx + uy * vy
+            val len = sqrt(ux * ux + uy * uy) * sqrt(vx * vx + vy * vy)
+            var ang = acos(max(-1.0, min(1.0, dot / len)))
+            if (ux * vy - uy * vx < 0.0) ang = -ang
+            return ang
+        }
+
+        val startAngle = angle(1.0, 0.0, ux, uy)
+        var deltaAngle = angle(ux, uy, vx, vy)
+
+        if (!isSweep && deltaAngle > 0) {
+            deltaAngle -= 2.0 * PI
+        } else if (isSweep && deltaAngle < 0) {
+            deltaAngle += 2.0 * PI
+        }
+
+        val numSegments = ceil(abs(deltaAngle) / (PI / 2.0)).toInt()
+        var angle = startAngle
+        for (i in 0 until numSegments) {
+            val segmentDelta = deltaAngle / numSegments
+            val ax = rx * cos(angle)
+            val ay = ry * sin(angle)
+            val bx = rx * cos(angle + segmentDelta)
+            val by = ry * sin(angle + segmentDelta)
+
+            val t = 4.0 / 3.0 * tan(segmentDelta / 4.0)
+            val x2 = ax - t * ry * sin(angle)
+            val y2 = ay + t * rx * cos(angle)
+            val x3 = bx + t * ry * sin(angle + segmentDelta)
+            val y3 = by - t * rx * cos(angle + segmentDelta)
+
+            // Rotate and translate
+            path.cubicTo(
+                    (cosTheta * x2 - sinTheta * y2 + cx).toFloat(), (sinTheta * x2 + cosTheta * y2 + cy).toFloat(),
+                    (cosTheta * x3 - sinTheta * y3 + cx).toFloat(), (sinTheta * x3 + cosTheta * y3 + cy).toFloat(),
+                    (cosTheta * bx - sinTheta * by + cx).toFloat(), (sinTheta * bx + cosTheta * by + cy).toFloat()
+            )
+            angle += segmentDelta
+        }
+    }
+
+    private fun addPathNodes(pathData: String): List<PathNode> = androidx.compose.ui.graphics.vector.addPathNodes(pathData)
 
     private fun String.parseDimension(): Float = filter { it.isDigit() || it == '.' || it == '-' }.toFloatOrNull()
             ?: 0f

@@ -3,15 +3,23 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:baselineAligned="false"
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:padding="8dp">
 
-    <ImageView
-        android:id="@+id/fetchedIconImageView"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        tools:src="@tools:sample/avatars" />
+    <FrameLayout
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="@drawable/red_border">
+
+        <ImageView
+            android:id="@+id/fetchedIconImageView"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            tools:src="@tools:sample/avatars" />
+    </FrameLayout>
 
     <LinearLayout
         android:layout_width="0dp"
@@ -35,10 +43,17 @@
             tools:text="com.example.package" />
     </LinearLayout>
 
-    <ImageView
-        android:id="@+id/frameworkIconImageView"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        tools:src="@tools:sample/avatars" />
+    <FrameLayout
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="@drawable/red_border">
+
+        <ImageView
+            android:id="@+id/frameworkIconImageView"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            tools:src="@tools:sample/avatars" />
+    </FrameLayout>
 
 </LinearLayout>

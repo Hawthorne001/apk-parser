@@ -1,15 +1,28 @@
 package net.dongliu.apk.parser.utils
 
-import androidx.core.text.ICUCompat
 import net.dongliu.apk.parser.bean.DeviceConfig
 import net.dongliu.apk.parser.struct.resource.ResourceTable
 import java.util.Locale
+
+/**
+ * Interface for resolving the script of a locale.
+ * Should be implemented using Android's ICUCompat if running on Android.
+ */
+interface LocaleScriptResolver {
+    fun getScript(locale: Locale): String
+}
 
 /**
  * Mimics Android's Resource resolution logic for Locales and Device configurations.
  */
 object Locales {
     const val PERFECT_SCORE = Integer.MAX_VALUE
+
+    /**
+     * Resolver for locale scripts. If null, script matching will be skipped or use simple fallback.
+     */
+    @JvmStatic
+    var scriptResolver: LocaleScriptResolver? = null
 
     private fun isPseudoLocale(locale: Locale): Boolean {
         return ((locale.language == "en" && locale.country == "XA") ||
@@ -101,11 +114,7 @@ object Locales {
     }
 
     private fun getScript(locale: Locale): String {
-        return try {
-            ICUCompat.maximizeAndGetScript(locale) ?: ""
-        } catch (e: Throwable) {
-            ""
-        }
+        return scriptResolver?.getScript(locale) ?: ""
     }
 
     /**

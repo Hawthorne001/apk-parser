@@ -1,6 +1,7 @@
 package com.lb.apkparserdemo.activities.comparison
 
 import android.os.Bundle
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.core.view.ViewCompat
@@ -16,20 +17,26 @@ class ComparisonActivity : BoundActivity<ActivityComparisonBinding>(ActivityComp
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // Force light status bar content (white icons)
+        enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(0))
+        
         ViewCompat.setOnApplyWindowInsetsListener(binding.appBarLayout) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, 0)
             insets
         }
-        ViewCompat.setOnApplyWindowInsetsListener(binding.contentContainer) { v, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(binding.recyclerView) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
             v.updatePadding(bottom = systemBars.bottom, left = systemBars.left, right = systemBars.right)
             insets
         }
         setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.apply {
+            setDisplayHomeAsUpEnabled(true)
+        }
         binding.toolbar.setNavigationOnClickListener { finish() }
+        // Ensure the up button is white
+        binding.toolbar.navigationIcon?.setTint(android.graphics.Color.WHITE)
 
         val adapter = ComparisonAdapter()
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
