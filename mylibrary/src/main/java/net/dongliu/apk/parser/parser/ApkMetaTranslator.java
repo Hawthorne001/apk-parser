@@ -147,22 +147,7 @@ public class ApkMetaTranslator implements XmlStreamer {
             case "instrumentation":
             case "permission-group":
             case "meta-data": {
-                final Attribute iconAttr = attributes.get("icon");
-                if (iconAttr != null) {
-                    this.iconPaths.addAll(this.extractIconPaths(iconAttr, "icon"));
-                }
-                final Attribute roundIconAttr = attributes.get("roundIcon");
-                if (roundIconAttr != null) {
-                    this.iconPaths.addAll(this.extractIconPaths(roundIconAttr, "roundIcon"));
-                }
-                final Attribute logoAttr = attributes.get("logo");
-                if (logoAttr != null) {
-                    this.iconPaths.addAll(this.extractIconPaths(logoAttr, "logo"));
-                }
-                final Attribute bannerAttr = attributes.get("banner");
-                if (bannerAttr != null) {
-                    this.iconPaths.addAll(this.extractIconPaths(bannerAttr, "banner"));
-                }
+                // Activity-level icons can be ignored for now to avoid mismatches with the primary application icon.
                 break;
             }
             case "manifest":

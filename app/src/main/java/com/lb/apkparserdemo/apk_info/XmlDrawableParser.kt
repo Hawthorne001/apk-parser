@@ -2,6 +2,7 @@ package com.lb.apkparserdemo.apk_info
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
@@ -19,6 +20,7 @@ import net.dongliu.apk.parser.bean.DeviceConfig
 import net.dongliu.apk.parser.parser.BinaryXmlParser
 import net.dongliu.apk.parser.parser.XmlStreamer
 import net.dongliu.apk.parser.parser.XmlTranslator
+import net.dongliu.apk.parser.struct.xml.Attributes
 import net.dongliu.apk.parser.struct.xml.XmlNodeEndTag
 import net.dongliu.apk.parser.struct.xml.XmlNodeStartTag
 import org.xmlpull.v1.XmlPullParser
@@ -31,7 +33,28 @@ object XmlDrawableParser {
 
     class VectorBitmapDrawable(context: Context, bitmap: Bitmap) : BitmapDrawable(context.resources, bitmap)
 
-    fun tryParseDrawable(context: Context, binXml: ByteArray, apkInfo: ApkInfo, deviceConfig: DeviceConfig?, subResourceProvider: ((String) -> ByteArray?)? = null): Drawable? {
+    private fun Attributes.getAttr(name: String): String? {
+        // Try direct name lookup (standard in this library)
+        val value = this.getString(name)
+        if (value != null) return value
+        
+        // Iterate manually to handle namespaces or prefixes if getString fails
+        for (attr in this.attributes) {
+            if (attr != null && (attr.name == name || attr.name == "android:$name")) {
+                return attr.value
+            }
+        }
+        return null
+    }
+
+    fun tryParseDrawable(
+        context: Context, 
+        binXml: ByteArray, 
+        apkInfo: ApkInfo, 
+        deviceConfig: DeviceConfig?, 
+        targetResources: Resources? = null,
+        subResourceProvider: ((String) -> ByteArray?)? = null
+    ): Drawable? {
         android.util.Log.d("AppLog", "icon fetching: tryParseDrawable (Binary)")
         try {
             val xmlTranslator = XmlTranslator()
@@ -50,11 +73,11 @@ object XmlDrawableParser {
             parser.parse()
             if (streamer.isVector) {
                 android.util.Log.d("AppLog", "icon fetching: parsed as VectorDrawable")
-                streamer.imageVector?.let { imageVectorToDrawable(context, it, requestedAppIconSize = 0) } // We can pass a size here if needed
+                streamer.imageVector?.let { imageVectorToDrawable(context, it, requestedAppIconSize = 0) }
             } else {
                 // Fallback to framework for non-vector drawables (layer-list, etc.)
                 android.util.Log.d("AppLog", "icon fetching: not a vector, fallback to framework")
-                val drawable = tryParseFrameworkDrawable(context, binXml)
+                val drawable = tryParseFrameworkDrawable(context, binXml, targetResources)
                 if (drawable == null) android.util.Log.d("AppLog", "icon fetching: framework fallback failed")
                 else android.util.Log.d("AppLog", "icon fetching: framework fallback succeeded")
                 drawable
@@ -62,7 +85,7 @@ object XmlDrawableParser {
         } catch (e: Exception) {
             android.util.Log.d("AppLog", "icon fetching: exception in BinaryXmlParser: ${e.message}")
             // Last resort fallback
-            tryParseFrameworkDrawable(context, binXml)
+            tryParseFrameworkDrawable(context, binXml, targetResources)
         }
     }
 
@@ -94,7 +117,7 @@ object XmlDrawableParser {
     }
 
     @SuppressLint("PrivateApi", "DiscouragedPrivateApi")
-    private fun tryParseFrameworkDrawable(context: Context, binXml: ByteArray): Drawable? {
+    private fun tryParseFrameworkDrawable(context: Context, binXml: ByteArray, targetResources: Resources?): Drawable? {
         try {
             val xmlBlock = Class.forName("android.content.res.XmlBlock")
             val xmlBlockCtr = xmlBlock.getConstructor(ByteArray::class.java)
@@ -108,14 +131,62 @@ object XmlDrawableParser {
             }
             if (type == XmlPullParser.START_TAG) {
                 val attrs = Xml.asAttributeSet(parser)
-                val drawable = Drawable.createFromXmlInner(context.resources, parser, attrs, context.theme)
-                // if (drawable == null) android.util.Log.d("AppLog", "icon fetching: framework failed to create drawable from XML")
+                val resToUse = targetResources ?: context.resources
+                val drawable = Drawable.createFromXmlInner(resToUse, parser, attrs, context.theme)
                 return drawable
             }
         } catch (e: Exception) {
             // android.util.Log.d("AppLog", "icon fetching: framework exception: ${e.message}")
         }
         return null
+    }
+
+    private fun appendVectorToBuilder(vector: ImageVector, builder: ImageVector.Builder?) {
+        if (builder == null) return
+        appendGroupToBuilder(vector.root, builder)
+    }
+
+    private fun appendGroupToBuilder(group: VectorGroup, builder: ImageVector.Builder) {
+        builder.addGroup(
+            name = group.name,
+            rotate = group.rotation,
+            pivotX = group.pivotX,
+            pivotY = group.pivotY,
+            scaleX = group.scaleX,
+            scaleY = group.scaleY,
+            translationX = group.translationX,
+            translationY = group.translationY,
+            clipPathData = group.clipPathData
+        )
+        for (node in group) {
+            when (node) {
+                is VectorPath -> {
+                    builder.addPath(
+                        pathData = node.pathData,
+                        name = node.name,
+                        fill = node.fill,
+                        fillAlpha = node.fillAlpha,
+                        stroke = node.stroke,
+                        strokeAlpha = node.strokeAlpha,
+                        strokeLineWidth = node.strokeLineWidth,
+                        strokeLineCap = node.strokeLineCap,
+                        strokeLineJoin = node.strokeLineJoin,
+                        strokeLineMiter = node.strokeLineMiter,
+                        pathFillType = node.pathFillType
+                    )
+                }
+                is VectorGroup -> appendGroupToBuilder(node, builder)
+            }
+        }
+        builder.clearGroup()
+    }
+
+    private fun isZipPath(path: String?): Boolean {
+        if (path.isNullOrBlank()) return false
+        if (path.startsWith("#")) return false
+        if (path.startsWith("resourceId:")) return false
+        if (path.startsWith("?")) return false
+        return true
     }
 
     private class VectorDrawableStreamer(
@@ -128,114 +199,139 @@ object XmlDrawableParser {
         var isVector = false
         private var builder: ImageVector.Builder? = null
         private val extraGroupsStack = mutableListOf<Int>()
+        var depth = 0
+        private val streamerLevelBuilderStack = mutableListOf<ImageVector.Builder?>()
+        private var isInsideVector = false
 
         override fun onStartTag(tag: XmlNodeStartTag) {
             val attr = tag.attributes
-            when (tag.name) {
-                "vector" -> {
-                    isVector = true
-                    val width = attr.getString("width")?.parseDimension() ?: 24f
-                    val height = attr.getString("height")?.parseDimension() ?: 24f
-                    val viewportWidth = attr.getString("viewportWidth")?.toFloat() ?: width
-                    val viewportHeight = attr.getString("viewportHeight")?.toFloat() ?: height
+            val tagName = tag.name
+            if (depth == 0 && tagName == "vector") {
+                isVector = true
+            }
 
-                    builder = ImageVector.Builder(
-                            name = attr.getString("name") ?: "vector",
-                            defaultWidth = width.dp,
-                            defaultHeight = height.dp,
-                            viewportWidth = viewportWidth,
-                            viewportHeight = viewportHeight,
-                            tintColor = attr.getString("tint")?.let { parseColor(context, it) }
-                                    ?: Color.Unspecified,
-                            tintBlendMode = parseBlendMode(attr.getString("tintMode")),
-                            autoMirror = attr.getBoolean("autoMirrored", false)
-                    )
-                    extraGroupsStack.add(0)
-                }
+            if (isVector) {
+                when (tagName) {
+                    "vector" -> {
+                        val width = attr.getAttr("width")?.parseDimension() ?: 24f
+                        val height = attr.getAttr("height")?.parseDimension() ?: 24f
+                        val viewportWidth = attr.getAttr("viewportWidth")?.toFloat() ?: width
+                        val viewportHeight = attr.getAttr("viewportHeight")?.toFloat() ?: height
 
-                "group" -> {
-                    builder?.addGroup(
-                            name = attr.getString("name") ?: "",
-                            rotate = attr.getString("rotation")?.toFloat() ?: 0f,
-                            pivotX = attr.getString("pivotX")?.toFloat() ?: 0f,
-                            pivotY = attr.getString("pivotY")?.toFloat() ?: 0f,
-                            scaleX = attr.getString("scaleX")?.toFloat() ?: 1f,
-                            scaleY = attr.getString("scaleY")?.toFloat() ?: 1f,
-                            translationX = attr.getString("translateX")?.toFloat() ?: 0f,
-                            translationY = attr.getString("translateY")?.toFloat() ?: 0f
-                    )
-                    extraGroupsStack.add(0)
-                }
+                        val newBuilder = ImageVector.Builder(
+                                name = attr.getAttr("name") ?: "vector",
+                                defaultWidth = width.dp,
+                                defaultHeight = height.dp,
+                                viewportWidth = viewportWidth,
+                                viewportHeight = viewportHeight,
+                                tintColor = attr.getAttr("tint")?.let { parseColor(context, it) }
+                                        ?: Color.Unspecified,
+                                tintBlendMode = parseBlendMode(attr.getAttr("tintMode")),
+                                autoMirror = attr.getAttr("autoMirrored")?.toBoolean() ?: false
+                        )
+                        if (isInsideVector && builder != null) {
+                            streamerLevelBuilderStack.add(builder)
+                        }
+                        builder = newBuilder
+                        isInsideVector = true
+                        extraGroupsStack.add(0)
+                    }
 
-                "inset" -> {
-                    // Just a container for modern icons, let the parser continue to child tags
-                    attr.getString("drawable")?.let { innerDrawable ->
-                        android.util.Log.d("AppLog", "icon fetching: inset has drawable attribute: $innerDrawable")
-                        // If it's a path or resourceId, we should try to parse it
-                        if (innerDrawable.endsWith(".xml")) {
-                            subResourceProvider?.invoke(innerDrawable)?.let { innerBytes ->
-                                val subStreamer = VectorDrawableStreamer(context, apkInfo, deviceConfig, subResourceProvider)
-                                val subParser = BinaryXmlParser(ByteBuffer.wrap(innerBytes), apkInfo.resourceTable, subStreamer, deviceConfig)
-                                try {
-                                    subParser.parse()
-                                    subStreamer.imageVector?.let { subVector ->
-                                        builder?.addPath(
-                                                pathData = subVector.root.map { if (it is VectorPath) it.pathData else emptyList() }.flatten(),
-                                                name = "inset_sub",
-                                                fill = SolidColor(Color.Transparent) // This is a hack, proper nested vector support is complex
-                                        )
+                    "group" -> {
+                        builder?.addGroup(
+                                name = attr.getAttr("name") ?: "",
+                                rotate = attr.getAttr("rotation")?.toFloat() ?: 0f,
+                                pivotX = attr.getAttr("pivotX")?.toFloat() ?: 0f,
+                                pivotY = attr.getAttr("pivotY")?.toFloat() ?: 0f,
+                                scaleX = attr.getAttr("scaleX")?.toFloat() ?: 1f,
+                                scaleY = attr.getAttr("scaleY")?.toFloat() ?: 1f,
+                                translationX = attr.getAttr("translateX")?.toFloat() ?: 0f,
+                                translationY = attr.getAttr("translateY")?.toFloat() ?: 0f
+                        )
+                        extraGroupsStack.add(0)
+                    }
+
+                    "inset", "rotate" -> {
+                        attr.getAttr("drawable")?.let { innerDrawable ->
+                            if (isZipPath(innerDrawable)) {
+                                subResourceProvider?.invoke(innerDrawable)?.let { innerBytes ->
+                                    val subStreamer = VectorDrawableStreamer(context, apkInfo, deviceConfig, subResourceProvider)
+                                    val subParser = BinaryXmlParser(ByteBuffer.wrap(innerBytes), apkInfo.resourceTable, subStreamer, deviceConfig)
+                                    try {
+                                        subParser.parse()
+                                        subStreamer.imageVector?.let { subVector ->
+                                            appendVectorToBuilder(subVector, builder)
+                                        }
+                                    } catch (ignored: Exception) {
                                     }
-                                } catch (ignored: Exception) {
                                 }
                             }
                         }
                     }
-                }
 
-                "path" -> {
-                    val pathData = attr.getString("pathData") ?: return
-                    builder?.addPath(
-                            pathData = addPathNodes(pathData),
-                            name = attr.getString("name") ?: "",
-                            fill = attr.getString("fillColor")?.let { obtainBrush(context, it, apkInfo, deviceConfig, subResourceProvider) },
-                            fillAlpha = attr.getString("fillAlpha")?.toFloat() ?: 1f,
-                            stroke = attr.getString("strokeColor")?.let { obtainBrush(context, it, apkInfo, deviceConfig, subResourceProvider) },
-                            strokeAlpha = attr.getString("strokeAlpha")?.toFloat() ?: 1f,
-                            strokeLineWidth = attr.getString("strokeWidth")?.toFloat() ?: 0f,
-                            strokeLineCap = parseStrokeCap(attr.getString("strokeLineCap")),
-                            strokeLineJoin = parseStrokeJoin(attr.getString("strokeLineJoin")),
-                            strokeLineMiter = attr.getString("strokeMiterLimit")?.toFloat() ?: 4f,
-                            pathFillType = if (attr.getString("fillType") == "evenOdd" || attr.getString("fillType") == "1") PathFillType.EvenOdd else PathFillType.NonZero
-                    )
-                }
+                    "path" -> {
+                        val pathData = attr.getAttr("pathData") ?: return
+                        val fillBrush = attr.getAttr("fillColor")?.let { obtainBrush(context, it, apkInfo, deviceConfig, subResourceProvider) }
+                        val strokeBrush = attr.getAttr("strokeColor")?.let { obtainBrush(context, it, apkInfo, deviceConfig, subResourceProvider) }
+                        val finalFill = if (fillBrush == null && strokeBrush == null) SolidColor(Color.Black) else fillBrush
 
-                "clip-path" -> {
-                    val pathData = attr.getString("pathData") ?: return
-                    builder?.addGroup(
-                            name = attr.getString("name") ?: "",
-                            clipPathData = addPathNodes(pathData)
-                    )
-                    if (extraGroupsStack.isNotEmpty()) {
-                        extraGroupsStack[extraGroupsStack.size - 1]++
+                        builder?.addPath(
+                                pathData = addPathNodes(pathData),
+                                name = attr.getAttr("name") ?: "",
+                                fill = finalFill,
+                                fillAlpha = attr.getAttr("fillAlpha")?.toFloat() ?: 1f,
+                                stroke = strokeBrush,
+                                strokeAlpha = attr.getAttr("strokeAlpha")?.toFloat() ?: 1f,
+                                strokeLineWidth = attr.getAttr("strokeWidth")?.toFloat() ?: 0f,
+                                strokeLineCap = parseStrokeCap(attr.getAttr("strokeLineCap")),
+                                strokeLineJoin = parseStrokeJoin(attr.getAttr("strokeLineJoin")),
+                                strokeLineMiter = attr.getAttr("strokeMiterLimit")?.toFloat() ?: 4f,
+                                pathFillType = if (attr.getAttr("fillType") == "evenOdd" || attr.getAttr("fillType") == "1") PathFillType.EvenOdd else PathFillType.NonZero
+                        )
+                    }
+
+                    "clip-path" -> {
+                        val pathData = attr.getAttr("pathData") ?: return
+                        builder?.addGroup(
+                                name = attr.getAttr("name") ?: "",
+                                clipPathData = addPathNodes(pathData)
+                        )
+                        if (extraGroupsStack.isNotEmpty()) {
+                            extraGroupsStack[extraGroupsStack.size - 1]++
+                        }
                     }
                 }
             }
+            depth++
         }
 
         override fun onEndTag(tag: XmlNodeEndTag) {
-            when (tag.name) {
-                "vector" -> {
-                    if (extraGroupsStack.isNotEmpty()) {
-                        val extras = extraGroupsStack.removeAt(extraGroupsStack.size - 1)
-                        repeat(extras) { builder?.clearGroup() }
+            depth--
+            val tagName = tag.name
+            if (isVector) {
+                when (tagName) {
+                    "vector" -> {
+                        if (extraGroupsStack.isNotEmpty()) {
+                            val extras = extraGroupsStack.removeAt(extraGroupsStack.size - 1)
+                            repeat(extras) { builder?.clearGroup() }
+                        }
+                        val currentFinishedVector = builder?.build()
+                        if (streamerLevelBuilderStack.isNotEmpty()) {
+                            builder = streamerLevelBuilderStack.removeAt(streamerLevelBuilderStack.size - 1)
+                            if (currentFinishedVector != null) {
+                                appendVectorToBuilder(currentFinishedVector, builder)
+                            }
+                        } else {
+                            imageVector = currentFinishedVector
+                            isInsideVector = false
+                        }
                     }
-                    imageVector = builder?.build()
-                }
 
-                "group" -> {
-                    if (extraGroupsStack.isNotEmpty()) {
-                        val extras = extraGroupsStack.removeAt(extraGroupsStack.size - 1)
-                        repeat(extras + 1) { builder?.clearGroup() }
+                    "group" -> {
+                        if (extraGroupsStack.isNotEmpty()) {
+                            val extras = extraGroupsStack.removeAt(extraGroupsStack.size - 1)
+                            repeat(extras + 1) { builder?.clearGroup() }
+                        }
                     }
                 }
             }
@@ -343,6 +439,9 @@ object XmlDrawableParser {
         val canvas = Canvas(android.graphics.Canvas(bitmap))
         val drawScope = CanvasDrawScope()
         drawScope.draw(density, LayoutDirection.Ltr, canvas, androidx.compose.ui.geometry.Size(widthPx.toFloat(), heightPx.toFloat())) {
+            val colorFilter = if (imageVector.tintColor != Color.Unspecified && imageVector.tintColor != Color.Transparent) {
+                ColorFilter.tint(imageVector.tintColor, imageVector.tintBlendMode)
+            } else null
             withTransform({
                 scale(
                         scaleX = widthPx.toFloat() / imageVector.viewportWidth,
@@ -350,13 +449,13 @@ object XmlDrawableParser {
                         pivot = androidx.compose.ui.geometry.Offset.Zero
                 )
             }) {
-                renderVectorGroup(imageVector.root)
+                renderVectorGroup(imageVector.root, colorFilter)
             }
         }
         return VectorBitmapDrawable(context, bitmap)
     }
 
-    private fun androidx.compose.ui.graphics.drawscope.DrawScope.renderVectorGroup(group: VectorGroup) {
+    private fun androidx.compose.ui.graphics.drawscope.DrawScope.renderVectorGroup(group: VectorGroup, colorFilter: ColorFilter?) {
         withTransform({
             translate(group.translationX, group.translationY)
             rotate(group.rotation, androidx.compose.ui.geometry.Offset(group.pivotX, group.pivotY))
@@ -372,7 +471,8 @@ object XmlDrawableParser {
                                 path = path,
                                 brush = node.fill ?: SolidColor(Color.Transparent),
                                 alpha = node.fillAlpha,
-                                style = Fill
+                                style = Fill,
+                                colorFilter = colorFilter
                         )
                         if (node.stroke != null && node.strokeLineWidth > 0) {
                             drawPath(
@@ -384,12 +484,13 @@ object XmlDrawableParser {
                                             cap = node.strokeLineCap,
                                             join = node.strokeLineJoin,
                                             miter = node.strokeLineMiter
-                                    )
+                                    ),
+                                    colorFilter = colorFilter
                             )
                         }
                     }
 
-                    is VectorGroup -> renderVectorGroup(node)
+                    is VectorGroup -> renderVectorGroup(node, colorFilter)
                 }
             }
         }
@@ -679,7 +780,10 @@ object XmlDrawableParser {
     private fun parseColor(context: Context, colorStr: String): Color {
         return try {
             if (colorStr.startsWith("#")) {
-                Color(android.graphics.Color.parseColor(colorStr))
+                val normalizedColor = if (colorStr.length == 4) {
+                    "#" + colorStr[1] + colorStr[1] + colorStr[2] + colorStr[2] + colorStr[3] + colorStr[3]
+                } else colorStr
+                Color(android.graphics.Color.parseColor(normalizedColor))
             } else if (colorStr.startsWith("resourceId:")) {
                 val resId = colorStr.substringAfter("0x").toLong(16).toInt()
                 if ((resId shr 24) == 0x01) {
@@ -762,24 +866,24 @@ object XmlDrawableParser {
             val attr = tag.attributes
             when (tag.name) {
                 "gradient" -> {
-                    type = attr.getString("type") ?: "linear"
-                    startColor = attr.getString("startColor")?.let { parseColor(context, it) }
+                    type = attr.getAttr("type") ?: "linear"
+                    startColor = attr.getAttr("startColor")?.let { parseColor(context, it) }
                             ?: Color.Transparent
-                    endColor = attr.getString("endColor")?.let { parseColor(context, it) }
+                    endColor = attr.getAttr("endColor")?.let { parseColor(context, it) }
                             ?: Color.Transparent
-                    centerColor = attr.getString("centerColor")?.let { parseColor(context, it) }
-                    startX = attr.getString("startX")?.toFloat() ?: 0f
-                    startY = attr.getString("startY")?.toFloat() ?: 0f
-                    endX = attr.getString("endX")?.toFloat() ?: 0f
-                    endY = attr.getString("endY")?.toFloat() ?: 0f
-                    centerX = attr.getString("centerX")?.toFloat() ?: 0f
-                    centerY = attr.getString("centerY")?.toFloat() ?: 0f
-                    gradientRadius = attr.getString("gradientRadius")?.toFloat() ?: 0f
+                    centerColor = attr.getAttr("centerColor")?.let { parseColor(context, it) }
+                    startX = attr.getAttr("startX")?.toFloat() ?: 0f
+                    startY = attr.getAttr("startY")?.toFloat() ?: 0f
+                    endX = attr.getAttr("endX")?.toFloat() ?: 0f
+                    endY = attr.getAttr("endY")?.toFloat() ?: 0f
+                    centerX = attr.getAttr("centerX")?.toFloat() ?: 0f
+                    centerY = attr.getAttr("centerY")?.toFloat() ?: 0f
+                    gradientRadius = attr.getAttr("gradientRadius")?.toFloat() ?: 0f
                 }
 
                 "item" -> {
-                    val offset = attr.getString("offset")?.toFloat() ?: 0f
-                    val colorStr = attr.getString("color")
+                    val offset = attr.getAttr("offset")?.toFloat() ?: 0f
+                    val colorStr = attr.getAttr("color")
                     val color = if (colorStr != null) {
                         obtainBrush(context, colorStr, apkInfo, deviceConfig, subResourceProvider)?.let {
                             if (it is SolidColor) it.value else Color.Transparent
@@ -828,12 +932,12 @@ object XmlDrawableParser {
     }
 
     private fun parseBlendMode(modeStr: String?): BlendMode = when (modeStr) {
-        "src_over" -> BlendMode.SrcOver
-        "src_in" -> BlendMode.SrcIn
-        "src_atop" -> BlendMode.SrcAtop
-        "multiply" -> BlendMode.Modulate
-        "screen" -> BlendMode.Screen
-        "add" -> BlendMode.Plus
+        "src_over", "3" -> BlendMode.SrcOver
+        "src_in", "5" -> BlendMode.SrcIn
+        "src_atop", "9" -> BlendMode.SrcAtop
+        "multiply", "14" -> BlendMode.Modulate
+        "screen", "15" -> BlendMode.Screen
+        "add", "16" -> BlendMode.Plus
         else -> BlendMode.SrcIn
     }
 

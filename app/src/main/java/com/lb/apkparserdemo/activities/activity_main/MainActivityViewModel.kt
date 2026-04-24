@@ -96,12 +96,33 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-                    it.add(context.packageName)
+//                    apps with very different icon:
                     it.add("com.android.dreams.basic")
-                    it.add("com.google.android.marvin.talkback")
-                    it.add("android")
+                    it.add("com.android.traceur")
+
+//                    apps that seem to have just the background layer of an adaptive icon:
+
+//                  apps with content of different color, and zoomed in:
+                    it.add("com.google.android.captiveportallogin")
+
+//                    apps with foreground content out-of-place or not scaled properly:
                     it.add("com.google.android.bluetooth")
-                    it.add("com.google.android.glasses.core")
+                    it.add("com.google.android.apps.safetyhub")
+                    it.add("com.google.android.gms.supervision")
+                    it.add("com.google.android.apps.accessibility.voiceaccess")
+                    it.add("com.google.android.apps.wallpaper")
+
+//                    apps that have blurred icon
+                    it.add("com.google.android.apps.wellbeing")
+
+//                    apps with no content at all (or not visible):
+                    it.add("com.google.android.deskclock")
+//apps with different colors but same content:
+                    it.add("com.bumble.app")
+                    it.add("com.android.bips")
+                    it.add("com.google.android.apps.tips")
+                    it.add("rk.android.app.shortcutmaker")
+                    it.add("com.google.android.accessibility.soundamplifier")
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
@@ -151,11 +172,16 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             var appIcon: Bitmap? = null
             if (VALIDATE_RESOURCES) {
                 //check if the library can get app icon, if required
+                val targetResources = try {
+                    packageManager.getResourcesForApplication(packageInfo.applicationInfo!!)
+                } catch (e: Exception) {
+                    null
+                }
                 appIcon = ApkIconFetcher.getApkIcon(
                         context, deviceConfig, object : ApkIconFetcher.ZipFilterCreator {
                     override fun generateZipFilter(): AbstractZipFilter =
                             MultiZipFilter(allApkFilePaths.map { getZipFilter(it, ZIP_FILTER_TYPE) })
-                }, currentApkInfo, appIconSize
+                }, currentApkInfo, appIconSize, targetResources
                 )
                 if (packageInfo.applicationInfo!!.icon != 0 && appIcon == null) {
                     failedGettingAppIconErrorsLiveData.inc()

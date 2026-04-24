@@ -35,7 +35,8 @@ object ApkIconFetcher {
         deviceConfig: DeviceConfig?,
         filterGenerator: ZipFilterCreator,
         apkInfo: ApkInfo,
-        requestedAppIconSize: Int = 0
+        requestedAppIconSize: Int = 0,
+        targetResources: android.content.res.Resources? = null
     ): Bitmap? {
         val iconPaths = apkInfo.apkMetaTranslator.iconPaths
         if (iconPaths.isEmpty()) {
@@ -46,21 +47,25 @@ object ApkIconFetcher {
         val densityDpi = context.resources.displayMetrics.densityDpi
         android.util.Log.d("AppLog", "icon fetching for ${apkInfo.apkMetaTranslator.apkMeta.packageName}: target densityDpi: $densityDpi, found ${iconPaths.size} icon paths")
 
-        // Custom sorting for density: ANY is best, then closest to target densityDpi
+        // Custom sorting for density: ANY is best, then closest to target densityDpi. 
+        // Deprioritize NONE (nodpi) and DEFAULT (0) as they are often not the primary launcher icons.
         val sortedIconPaths = iconPaths.sortedWith(Comparator { o1: IconPath, o2: IconPath ->
             if (o1.density == o2.density) return@Comparator 0
             if (o1.density == Densities.ANY) return@Comparator -1
             if (o2.density == Densities.ANY) return@Comparator 1
-            if (o1.density == Densities.NONE) return@Comparator -1
-            if (o2.density == Densities.NONE) return@Comparator 1
-            if (o1.density == Densities.DEFAULT) return@Comparator 1
-            if (o2.density == Densities.DEFAULT) return@Comparator -1
+            
+            val d1 = o1.density
+            val d2 = o2.density
+            val isNone1 = d1 == Densities.NONE || d1 == Densities.DEFAULT
+            val isNone2 = d2 == Densities.NONE || d2 == Densities.DEFAULT
+            
+            if (isNone1 != isNone2) return@Comparator if (isNone1) 1 else -1
 
-            val diff1 = abs(o1.density - densityDpi)
-            val diff2 = abs(o2.density - densityDpi)
+            val diff1 = abs(d1 - densityDpi)
+            val diff2 = abs(d2 - densityDpi)
             if (diff1 != diff2) return@Comparator diff1.compareTo(diff2)
             // if same distance, prefer higher density
-            o2.density.compareTo(o1.density)
+            d2.compareTo(d1)
         })
         // android.util.Log.d("AppLog", "icon fetching: sorted icon paths: ${sortedIconPaths.map { "${it.path} (density: ${it.density})" }}")
 
@@ -74,7 +79,7 @@ object ApkIconFetcher {
                 val bytes = filter.getByteArrayForEntries(hashSetOf(path))?.get(path)
                 if (bytes != null) {
                     try {
-                        val drawable = fetchDrawable(context, path, bytes, apkInfo, deviceConfig, filterGenerator, requestedAppIconSize)
+                        val drawable = fetchDrawable(context, path, bytes, apkInfo, deviceConfig, filterGenerator, requestedAppIconSize, targetResources)
                         if (drawable != null) {
                             val typeStr = getDetailedDrawableType(drawable, path)
                             android.util.Log.d("AppLog", "icon fetching for ${apkInfo.apkMetaTranslator.apkMeta.packageName}: SUCCESS: $path, type: $typeStr")
@@ -137,7 +142,8 @@ object ApkIconFetcher {
         apkInfo: ApkInfo,
         deviceConfig: DeviceConfig?,
         filterGenerator: ZipFilterCreator,
-        requestedAppIconSize: Int
+        requestedAppIconSize: Int,
+        targetResources: android.content.res.Resources? = null
     ): Drawable? {
         if (path.startsWith("#")) {
             return try {
@@ -160,7 +166,7 @@ object ApkIconFetcher {
 
                                 filterGenerator.generateZipFilter().use { filter ->
                                     val subBytes = filter.getByteArrayForEntries(emptySet(), hashSetOf(value))?.get(value)
-                                    return fetchDrawable(context, value, subBytes, apkInfo, deviceConfig, filterGenerator, requestedAppIconSize)
+                                    return fetchDrawable(context, value, subBytes, apkInfo, deviceConfig, filterGenerator, requestedAppIconSize, targetResources)
                                 }
                             }
                         }
@@ -192,7 +198,7 @@ object ApkIconFetcher {
                                     if (value.startsWith("#")) return ColorDrawable(Color.parseColor(value))
                                     filterGenerator.generateZipFilter().use { filter ->
                                         val subBytes = if (isZipPath(value)) filter.getByteArrayForEntries(emptySet(), hashSetOf(value))?.get(value) else null
-                                        return fetchDrawable(context, value, subBytes, apkInfo, deviceConfig, filterGenerator, requestedAppIconSize)
+                                        return fetchDrawable(context, value, subBytes, apkInfo, deviceConfig, filterGenerator, requestedAppIconSize, targetResources)
                                     }
                                 }
                             }
@@ -227,7 +233,7 @@ object ApkIconFetcher {
                 }
 
                 if (adaptiveIconParser.hasInlineContent()) {
-                    return XmlDrawableParser.tryParseDrawable(context, bytes, apkInfo, deviceConfig) { subPath ->
+                    return XmlDrawableParser.tryParseDrawable(context, bytes, apkInfo, deviceConfig, targetResources) { subPath ->
                         filterGenerator.generateZipFilter().use { it.getByteArrayForEntries(emptySet(), hashSetOf(subPath))?.get(subPath) }
                     }
                 }
@@ -240,11 +246,11 @@ object ApkIconFetcher {
                         val byteArrayForEntries = if (pathsToFetch.isNotEmpty()) filter.getByteArrayForEntries(emptySet(), pathsToFetch) ?: emptyMap() else emptyMap()
 
                         val backgroundDrawables = backgroundPaths.mapNotNull { p ->
-                            fetchDrawable(context, p, byteArrayForEntries[p], apkInfo, deviceConfig, filterGenerator, 0)
+                            fetchDrawable(context, p, byteArrayForEntries[p], apkInfo, deviceConfig, filterGenerator, 0, targetResources)
                         }
 
                         val foregroundDrawables = foregroundPaths.mapNotNull { p ->
-                            fetchDrawable(context, p, byteArrayForEntries[p], apkInfo, deviceConfig, filterGenerator, 0)
+                            fetchDrawable(context, p, byteArrayForEntries[p], apkInfo, deviceConfig, filterGenerator, 0, targetResources)
                         }
 
                         if (foregroundDrawables.isNotEmpty()) {
@@ -258,7 +264,7 @@ object ApkIconFetcher {
                         }
                     }
                 }
-                return XmlDrawableParser.tryParseDrawable(context, bytes, apkInfo, deviceConfig) { subPath ->
+                return XmlDrawableParser.tryParseDrawable(context, bytes, apkInfo, deviceConfig, targetResources) { subPath ->
                     filterGenerator.generateZipFilter().use { it.getByteArrayForEntries(emptySet(), hashSetOf(subPath))?.get(subPath) }
                 }
             } else if (rootTag == "layer-list") {
@@ -268,14 +274,14 @@ object ApkIconFetcher {
                         val pathsToFetch = drawablesPaths.filter { isZipPath(it) }.toHashSet()
                         val byteArrayForEntries = if (pathsToFetch.isNotEmpty()) filter.getByteArrayForEntries(emptySet(), pathsToFetch) ?: emptyMap() else emptyMap()
                         val drawables = drawablesPaths.mapNotNull { layerPath ->
-                            fetchDrawable(context, layerPath, byteArrayForEntries[layerPath], apkInfo, deviceConfig, filterGenerator, 0)
+                            fetchDrawable(context, layerPath, byteArrayForEntries[layerPath], apkInfo, deviceConfig, filterGenerator, 0, targetResources)
                         }
                         if (drawables.isNotEmpty()) {
                             return LayerDrawable(drawables.toTypedArray())
                         }
                     }
                 }
-                return XmlDrawableParser.tryParseDrawable(context, bytes, apkInfo, deviceConfig) { subPath ->
+                return XmlDrawableParser.tryParseDrawable(context, bytes, apkInfo, deviceConfig, targetResources) { subPath ->
                     filterGenerator.generateZipFilter().use { it.getByteArrayForEntries(emptySet(), hashSetOf(subPath))?.get(subPath) }
                 }
             } else if (rootTag == "bitmap" || rootTag == "nine-patch" || rootTag == "inset" || rootTag == "clip" || rootTag == "scale" || rootTag == "rotate") {
@@ -283,15 +289,15 @@ object ApkIconFetcher {
                 if (!innerPath.isNullOrBlank()) {
                     filterGenerator.generateZipFilter().use { filter ->
                         val srcBytes = if (isZipPath(innerPath)) filter.getByteArrayForEntries(hashSetOf(innerPath))?.get(innerPath) else null
-                        val drawable = fetchDrawable(context, innerPath, srcBytes, apkInfo, deviceConfig, filterGenerator, 0)
+                        val drawable = fetchDrawable(context, innerPath, srcBytes, apkInfo, deviceConfig, filterGenerator, 0, targetResources)
                         if (drawable != null) return drawable
                     }
                 }
-                return XmlDrawableParser.tryParseDrawable(context, bytes, apkInfo, deviceConfig) { subPath ->
+                return XmlDrawableParser.tryParseDrawable(context, bytes, apkInfo, deviceConfig, targetResources) { subPath ->
                     filterGenerator.generateZipFilter().use { it.getByteArrayForEntries(emptySet(), hashSetOf(subPath))?.get(subPath) }
                 }
             } else {
-                val drawable = XmlDrawableParser.tryParseDrawable(context, bytes, apkInfo, deviceConfig) { subPath ->
+                val drawable = XmlDrawableParser.tryParseDrawable(context, bytes, apkInfo, deviceConfig, targetResources) { subPath ->
                     filterGenerator.generateZipFilter().use { it.getByteArrayForEntries(emptySet(), hashSetOf(subPath))?.get(subPath) }
                 }
                 if (drawable == null) {
