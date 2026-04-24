@@ -116,7 +116,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                     it.add("com.google.android.apps.wellbeing")
 
 //                    apps with no content at all (or not visible):
-                    it.add("com.google.android.deskclock")
+
 //apps with different colors but same content:
                     it.add("com.bumble.app")
                     it.add("com.android.bips")

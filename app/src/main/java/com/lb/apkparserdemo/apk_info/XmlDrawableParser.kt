@@ -136,7 +136,7 @@ object XmlDrawableParser {
                 return drawable
             }
         } catch (e: Exception) {
-            // android.util.Log.d("AppLog", "icon fetching: framework exception: ${e.message}")
+            android.util.Log.d("AppLog", "icon fetching: framework exception: ${e.message}")
         }
         return null
     }
@@ -235,6 +235,11 @@ object XmlDrawableParser {
                         builder = newBuilder
                         isInsideVector = true
                         extraGroupsStack.add(0)
+                    }
+
+                    "color" -> {
+                        // This tag is simple, we can just record it and produce a dummy path if needed
+                        // But normally it's a root tag, handled by isVector=false -> fallback
                     }
 
                     "group" -> {

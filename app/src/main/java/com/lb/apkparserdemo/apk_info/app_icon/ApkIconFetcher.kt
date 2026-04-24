@@ -38,6 +38,26 @@ object ApkIconFetcher {
         requestedAppIconSize: Int = 0,
         targetResources: android.content.res.Resources? = null
     ): Bitmap? {
+        val apkMeta = apkInfo.apkMetaTranslator.apkMeta
+        if (targetResources != null) {
+            val resIds = mutableListOf<Long>()
+            if (apkMeta.roundIconResourceId != 0L) resIds.add(apkMeta.roundIconResourceId)
+            if (apkMeta.iconResourceId != 0L) resIds.add(apkMeta.iconResourceId)
+            
+            for (resId in resIds) {
+                try {
+                    val drawable = androidx.core.content.res.ResourcesCompat.getDrawable(targetResources, resId.toInt(), null)
+                    if (drawable != null) {
+                         android.util.Log.d("AppLog", "icon fetching for ${apkMeta.packageName}: SUCCESS via targetResources.getDrawable(0x${java.lang.Long.toHexString(resId)})")
+                         val size = if (requestedAppIconSize > 0) requestedAppIconSize else AppInfoUtil.getAppIconSize(context)
+                         return drawable.toBitmap(size, size)
+                    }
+                } catch (e: Exception) {
+                     // android.util.Log.d("AppLog", "icon fetching: failed loading via targetResources 0x${java.lang.Long.toHexString(resId)}: ${e.message}")
+                }
+            }
+        }
+
         val iconPaths = apkInfo.apkMetaTranslator.iconPaths
         if (iconPaths.isEmpty()) {
             android.util.Log.d("AppLog", "icon fetching: no icon paths found in manifest")

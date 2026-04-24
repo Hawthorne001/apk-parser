@@ -122,19 +122,17 @@ public class ApkMetaTranslator implements XmlStreamer {
                 final List<IconPath> allIconPaths = new ArrayList<>();
                 final Attribute iconAttr = attributes.get("icon");
                 if (iconAttr != null) {
+                    if (iconAttr.typedValue instanceof ResourceValue.ReferenceResourceValue) {
+                        this.apkMetaBuilder.setIconResourceId(((ResourceValue.ReferenceResourceValue) iconAttr.typedValue).getReferenceResourceId());
+                    }
                     allIconPaths.addAll(this.extractIconPaths(iconAttr, "icon"));
                 }
                 final Attribute roundIconAttr = attributes.get("roundIcon");
                 if (roundIconAttr != null) {
+                    if (roundIconAttr.typedValue instanceof ResourceValue.ReferenceResourceValue) {
+                        this.apkMetaBuilder.setRoundIconResourceId(((ResourceValue.ReferenceResourceValue) roundIconAttr.typedValue).getReferenceResourceId());
+                    }
                     allIconPaths.addAll(this.extractIconPaths(roundIconAttr, "roundIcon"));
-                }
-                final Attribute logoAttr = attributes.get("logo");
-                if (logoAttr != null) {
-                    allIconPaths.addAll(this.extractIconPaths(logoAttr, "logo"));
-                }
-                final Attribute bannerAttr = attributes.get("banner");
-                if (bannerAttr != null) {
-                    allIconPaths.addAll(this.extractIconPaths(bannerAttr, "banner"));
                 }
                 this.iconPaths = allIconPaths;
                 break;

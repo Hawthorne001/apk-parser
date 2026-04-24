@@ -20,6 +20,8 @@ public class ApkMeta {
     public final String label;
     private final String icon;
     private final String roundIcon;
+    public final long iconResourceId;
+    public final long roundIconResourceId;
     private final String logo;
     public final String versionName;
     public final long versionCode;
@@ -60,6 +62,8 @@ public class ApkMeta {
         this.label = builder.label;
         this.icon = builder.icon;
         this.roundIcon = builder.roundIcon;
+        this.iconResourceId = builder.iconResourceId;
+        this.roundIconResourceId = builder.roundIconResourceId;
         this.logo = builder.logo;
         this.versionName = builder.versionName;
         this.versionCode = builder.versionCode;
@@ -116,6 +120,8 @@ public class ApkMeta {
         private String label;
         private String icon;
         private String roundIcon;
+        private long iconResourceId;
+        private long roundIconResourceId;
         private String logo;
         private String versionName;
         private long versionCode = 0L;
@@ -175,8 +181,20 @@ public class ApkMeta {
         }
 
         @NonNull
+        public Builder setIconResourceId(final long iconResourceId) {
+            this.iconResourceId = iconResourceId;
+            return this;
+        }
+
+        @NonNull
         public Builder setRoundIcon(final @Nullable String roundIcon) {
             this.roundIcon = roundIcon;
+            return this;
+        }
+
+        @NonNull
+        public Builder setRoundIconResourceId(final long roundIconResourceId) {
+            this.roundIconResourceId = roundIconResourceId;
             return this;
         }
 
