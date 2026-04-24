@@ -34,11 +34,8 @@ object XmlDrawableParser {
     class VectorBitmapDrawable(context: Context, bitmap: Bitmap) : BitmapDrawable(context.resources, bitmap)
 
     private fun Attributes.getAttr(name: String): String? {
-        // Try direct name lookup (standard in this library)
         val value = this.getString(name)
         if (value != null) return value
-        
-        // Iterate manually to handle namespaces or prefixes if getString fails
         for (attr in this.attributes) {
             if (attr != null && (attr.name == name || attr.name == "android:$name")) {
                 return attr.value
@@ -53,6 +50,7 @@ object XmlDrawableParser {
         apkInfo: ApkInfo, 
         deviceConfig: DeviceConfig?, 
         targetResources: Resources? = null,
+        requestedAppIconSize: Int = 0,
         subResourceProvider: ((String) -> ByteArray?)? = null
     ): Drawable? {
         android.util.Log.d("AppLog", "icon fetching: tryParseDrawable (Binary)")
@@ -73,7 +71,7 @@ object XmlDrawableParser {
             parser.parse()
             if (streamer.isVector) {
                 android.util.Log.d("AppLog", "icon fetching: parsed as VectorDrawable")
-                streamer.imageVector?.let { imageVectorToDrawable(context, it, requestedAppIconSize = 0) }
+                streamer.imageVector?.let { imageVectorToDrawable(context, it, requestedAppIconSize = requestedAppIconSize) }
             } else {
                 // Fallback to framework for non-vector drawables (layer-list, etc.)
                 android.util.Log.d("AppLog", "icon fetching: not a vector, fallback to framework")
@@ -108,7 +106,7 @@ object XmlDrawableParser {
             } else {
                 android.util.Log.d("AppLog", "icon fetching: parsed string XML root: ${parser.name}, fallback to framework")
                 val attrs = Xml.asAttributeSet(parser)
-                Drawable.createFromXmlInner(context.resources, parser, attrs, context.theme)
+                Drawable.createFromXmlInner(context.resources, parser, attrs, null)
             }
         } catch (e: Exception) {
             android.util.Log.d("AppLog", "icon fetching: exception parsing string XML: ${e.message}")
@@ -132,8 +130,8 @@ object XmlDrawableParser {
             if (type == XmlPullParser.START_TAG) {
                 val attrs = Xml.asAttributeSet(parser)
                 val resToUse = targetResources ?: context.resources
-                val drawable = Drawable.createFromXmlInner(resToUse, parser, attrs, context.theme)
-                return drawable
+                // Icons should ideally not use themes, especially when loading from another app
+                return Drawable.createFromXmlInner(resToUse, parser, attrs, null)
             }
         } catch (e: Exception) {
             android.util.Log.d("AppLog", "icon fetching: framework exception: ${e.message}")
@@ -235,11 +233,6 @@ object XmlDrawableParser {
                         builder = newBuilder
                         isInsideVector = true
                         extraGroupsStack.add(0)
-                    }
-
-                    "color" -> {
-                        // This tag is simple, we can just record it and produce a dummy path if needed
-                        // But normally it's a root tag, handled by isVector=false -> fallback
                     }
 
                     "group" -> {
@@ -779,7 +772,7 @@ object XmlDrawableParser {
 
     private fun addPathNodes(pathData: String): List<PathNode> = androidx.compose.ui.graphics.vector.addPathNodes(pathData)
 
-    private fun String.parseDimension(): Float = filter { it.isDigit() || it == '.' || it == '-' }.toFloatOrNull()
+    private fun String.parseDimension(): Float = filter { it.isDigit() || it == '.' || it == '-' || it == 'e' || it == 'E' }.toFloatOrNull()
             ?: 0f
 
     private fun parseColor(context: Context, colorStr: String): Color {

@@ -24,7 +24,8 @@ class Attributes(size: Int) {
         //TODO this is an inefficient search. Should probably be using HashMap
         var result: Attribute? = null
         for (attribute in attributes) {
-            if (attribute!!.name == name) {
+            if (attribute == null) continue
+            if (attribute.name == name) {
                 val namespace = attribute.namespace
                 if (namespace.isEmpty() || namespace == "android" || namespace == "http://schemas.android.com/apk/res/android") {
                     //prefer default namespace of android.

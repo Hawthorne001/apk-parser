@@ -97,32 +97,31 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         val appsToFocusOn = HashSet<String>()
                 .also {
 //                    apps with very different icon:
-                    it.add("com.android.dreams.basic")
-                    it.add("com.android.traceur")
+//                    it.add("com.android.dreams.basic")
+//                    it.add("com.android.traceur")
 
 //                    apps that seem to have just the background layer of an adaptive icon:
 
 //                  apps with content of different color, and zoomed in:
-                    it.add("com.google.android.captiveportallogin")
+//                    it.add("com.google.android.captiveportallogin")
 
 //                    apps with foreground content out-of-place or not scaled properly:
-                    it.add("com.google.android.bluetooth")
-                    it.add("com.google.android.apps.safetyhub")
-                    it.add("com.google.android.gms.supervision")
-                    it.add("com.google.android.apps.accessibility.voiceaccess")
-                    it.add("com.google.android.apps.wallpaper")
+//                    it.add("com.google.android.bluetooth")
+//                    it.add("com.google.android.apps.safetyhub")
+//                    it.add("com.google.android.gms.supervision")
+//                    it.add("com.google.android.apps.accessibility.voiceaccess")
+//                    it.add("com.google.android.apps.wallpaper")
 
 //                    apps that have blurred icon
-                    it.add("com.google.android.apps.wellbeing")
+//                    it.add("com.google.android.apps.wellbeing")
 
-//                    apps with no content at all (or not visible):
 
 //apps with different colors but same content:
-                    it.add("com.bumble.app")
-                    it.add("com.android.bips")
-                    it.add("com.google.android.apps.tips")
-                    it.add("rk.android.app.shortcutmaker")
-                    it.add("com.google.android.accessibility.soundamplifier")
+//                    it.add("com.bumble.app")
+//                    it.add("com.android.bips")
+//                    it.add("com.google.android.apps.tips")
+//                    it.add("rk.android.app.shortcutmaker")
+//                    it.add("com.google.android.accessibility.soundamplifier")
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
