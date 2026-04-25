@@ -17,10 +17,21 @@ public class IconPath {
      * see {@link net.dongliu.apk.parser.struct.resource.Densities} for more density values.
      */
     public final int density;
+    
+    /**
+     * The attribute name from which this icon was extracted (e.g. "icon", "roundIcon", "activity-icon")
+     */
+    @Nullable
+    public final String attrName;
 
     public IconPath(final @Nullable String path, final int density) {
+        this(path, density, null);
+    }
+
+    public IconPath(final @Nullable String path, final int density, @Nullable String attrName) {
         this.path = path;
         this.density = density;
+        this.attrName = attrName;
     }
 
     @NonNull
@@ -29,6 +40,7 @@ public class IconPath {
         return "IconPath{" +
                 "path='" + this.path + '\'' +
                 ", density=" + this.density +
+                ", attrName='" + this.attrName + '\'' +
                 '}';
     }
 }

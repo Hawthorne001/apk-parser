@@ -37,13 +37,17 @@ public class ApkMetaTranslator implements XmlStreamer {
     private int depth = 0;
     @NonNull
     private final ApkMeta.Builder apkMetaBuilder = ApkMeta.newBuilder();
-    private List<IconPath> iconPaths = new ArrayList<>();
+    private final List<IconPath> iconPaths = new ArrayList<>();
     private long labelResId = 0;
 
     private final ResourceTable resourceTable;
     @Nullable
     private final DeviceConfig deviceConfig;
     private java.util.Set<Locale> allLocales = java.util.Collections.emptySet();
+
+    private Attribute currentActivityIcon;
+    private Attribute currentActivityRoundIcon;
+    private boolean isLauncherActivity = false;
 
     public ApkMetaTranslator(final @NonNull ResourceTable resourceTable, @Nullable final DeviceConfig deviceConfig) {
         this.resourceTable = resourceTable;
@@ -62,7 +66,6 @@ public class ApkMetaTranslator implements XmlStreamer {
     public void onStartTag(final @NonNull XmlNodeStartTag xmlNodeStartTag) {
         final Attributes attributes = xmlNodeStartTag.attributes;
         final String xmlNodeStartTagName = xmlNodeStartTag.name;
-        // android.util.Log.d("AppLog", "icon fetching: manifest tag encountered: <" + xmlNodeStartTagName + ">");
         switch (xmlNodeStartTagName) {
             case "application": {
                 this.apkMetaBuilder.setDebuggable(attributes.getBoolean("debuggable", false));
@@ -86,7 +89,6 @@ public class ApkMetaTranslator implements XmlStreamer {
                         this.nonLocalizedLabel = labelAttr.value;
                     }
 
-                    // Step 1: Use already resolved value if available, else try matched locale
                     label = labelAttr.value;
                     if (label == null) {
                         label = labelAttr.toStringValue(this.resourceTable, this.deviceConfig);
@@ -95,7 +97,6 @@ public class ApkMetaTranslator implements XmlStreamer {
                     this.resolvedLabelLocale = this.deviceConfig != null ? this.deviceConfig.getLocale() : null;
 
                     if (label != null && label.startsWith("resourceId:0x")) {
-                        // Resolution failed or just returned ID
                         label = null;
                         this.resolvedLabel = null;
                     }
@@ -104,7 +105,6 @@ public class ApkMetaTranslator implements XmlStreamer {
                 if (label != null && !label.isEmpty()) {
                     this.apkMetaBuilder.setLabel(label);
                 } else {
-                    // Step 3: Manifest "name" attribute
                     final String packageName = this.apkMetaBuilder.getPackageName();
                     String className = attributes.getString("name");
                     if (className != null && !className.isEmpty()) {
@@ -115,37 +115,54 @@ public class ApkMetaTranslator implements XmlStreamer {
                         }
                         this.apkMetaBuilder.setLabel(className);
                     } else {
-                        // Step 4: Package name
                         this.apkMetaBuilder.setLabel(packageName);
                     }
                 }
-                final List<IconPath> allIconPaths = new ArrayList<>();
                 final Attribute iconAttr = attributes.get("icon");
                 if (iconAttr != null) {
                     if (iconAttr.typedValue instanceof ResourceValue.ReferenceResourceValue) {
                         this.apkMetaBuilder.setIconResourceId(((ResourceValue.ReferenceResourceValue) iconAttr.typedValue).getReferenceResourceId());
                     }
-                    allIconPaths.addAll(this.extractIconPaths(iconAttr, "icon"));
+                    this.iconPaths.addAll(this.extractIconPaths(iconAttr, "icon"));
                 }
                 final Attribute roundIconAttr = attributes.get("roundIcon");
                 if (roundIconAttr != null) {
                     if (roundIconAttr.typedValue instanceof ResourceValue.ReferenceResourceValue) {
                         this.apkMetaBuilder.setRoundIconResourceId(((ResourceValue.ReferenceResourceValue) roundIconAttr.typedValue).getReferenceResourceId());
                     }
-                    allIconPaths.addAll(this.extractIconPaths(roundIconAttr, "roundIcon"));
+                    this.iconPaths.addAll(this.extractIconPaths(roundIconAttr, "roundIcon"));
                 }
-                this.iconPaths = allIconPaths;
                 break;
             }
             case "activity":
-            case "activity-alias":
-            case "receiver":
-            case "service":
-            case "provider":
-            case "instrumentation":
-            case "permission-group":
-            case "meta-data": {
-                // Activity-level icons can be ignored for now to avoid mismatches with the primary application icon.
+            case "activity-alias": {
+                this.isLauncherActivity = false;
+                this.currentActivityIcon = attributes.get("icon");
+                this.currentActivityRoundIcon = attributes.get("roundIcon");
+                break;
+            }
+            case "action": {
+                if ("android.intent.action.MAIN".equals(attributes.getString("name"))) {
+                    if (matchTagPath("intent-filter", "activity") || matchTagPath("intent-filter", "activity-alias")) {
+                        // Potential launcher, but need category LAUNCHER too
+                    }
+                }
+                break;
+            }
+            case "category": {
+                if ("android.intent.category.LAUNCHER".equals(attributes.getString("name"))) {
+                    if (matchTagPath("intent-filter", "activity") || matchTagPath("intent-filter", "activity-alias")) {
+                        this.isLauncherActivity = true;
+                        if (this.currentActivityIcon != null) {
+                             this.iconPaths.addAll(this.extractIconPaths(this.currentActivityIcon, "launcher-activity-icon"));
+                             this.currentActivityIcon = null;
+                        }
+                        if (this.currentActivityRoundIcon != null) {
+                             this.iconPaths.addAll(this.extractIconPaths(this.currentActivityRoundIcon, "launcher-activity-roundIcon"));
+                             this.currentActivityRoundIcon = null;
+                        }
+                    }
+                }
                 break;
             }
             case "manifest":
@@ -212,6 +229,11 @@ public class ApkMetaTranslator implements XmlStreamer {
     @Override
     public void onEndTag(final @NonNull XmlNodeEndTag xmlNodeEndTag) {
         this.depth--;
+        if ("activity".equals(xmlNodeEndTag.getName()) || "activity-alias".equals(xmlNodeEndTag.getName())) {
+            this.currentActivityIcon = null;
+            this.currentActivityRoundIcon = null;
+            this.isLauncherActivity = false;
+        }
     }
 
     @Override
@@ -256,7 +278,7 @@ public class ApkMetaTranslator implements XmlStreamer {
 
     private boolean isBetterThan(ResourceTable.Resource candidate, ResourceTable.Resource current, @Nullable DeviceConfig requestedConfig) {
         if (current == null) return true;
-        
+
         if (requestedConfig != null && requestedConfig.getMcc() != 0) {
             if (candidate.type.config.getMcc() != current.type.config.getMcc()) {
                 return candidate.type.config.getMcc() != 0;
@@ -272,7 +294,7 @@ public class ApkMetaTranslator implements XmlStreamer {
                 return candidate.type.config.getMnc() == 0;
             }
         }
-        
+
         if (candidate.type.config.getSdkVersion() != current.type.config.getSdkVersion()) {
             return candidate.type.config.getSdkVersion() > current.type.config.getSdkVersion();
         }
@@ -281,11 +303,11 @@ public class ApkMetaTranslator implements XmlStreamer {
             int reqDensity = requestedConfig.getDensity();
             int candDensity = candidate.type.density;
             int curDensity = current.type.density;
-            
+
             if (candDensity != curDensity) {
                 if (candDensity == Densities.ANY) return true;
                 if (curDensity == Densities.ANY) return false;
-                
+
                 int candidateDiff = Math.abs(candDensity - reqDensity);
                 int currentDiff = Math.abs(curDensity - reqDensity);
                 if (candidateDiff != currentDiff) {
@@ -329,23 +351,15 @@ public class ApkMetaTranslator implements XmlStreamer {
         if (label != null && !label.startsWith("resourceId:0x")) {
             return label;
         }
-        // Last fallback: use what was set in onStartTag (name or packageName)
         String fallback = this.apkMetaBuilder.getLabel();
         return fallback != null ? fallback : "";
     }
 
-    /**
-     * Get the default label (literal string if present, otherwise default resource value).
-     */
     @NonNull
     public String getDefaultLabel() {
         return getLabel((DeviceConfig) null);
     }
 
-    /**
-     * Get the non-localized label (literal string in manifest).
-     * Mirror of {@link android.content.pm.ApplicationInfo#nonLocalizedLabel}.
-     */
     @Nullable
     public String getNonLocalizedLabel() {
         return this.nonLocalizedLabel;
@@ -365,7 +379,7 @@ public class ApkMetaTranslator implements XmlStreamer {
             final String value = iconAttr.value;
             if (value != null) {
                 updateApkMetaIcon(value, attrName);
-                final IconPath iconPath = new IconPath(value, Densities.DEFAULT);
+                final IconPath iconPath = new IconPath(value, Densities.DEFAULT, attrName);
                 return Collections.singletonList(iconPath);
             }
         }
@@ -380,42 +394,38 @@ public class ApkMetaTranslator implements XmlStreamer {
         if (resources.isEmpty()) {
             if ((resourceId >> 24) == 0x01) {
                 String path = "resourceId:0x" + Long.toHexString(resourceId);
-                return Collections.singletonList(new IconPath(path, Densities.DEFAULT));
+                return Collections.singletonList(new IconPath(path, Densities.DEFAULT, attrName));
             }
             return Collections.emptyList();
         }
 
         final List<IconPath> icons = new ArrayList<>();
-        
-        // Find the best match for the current configuration
-        ResourceTable.Resource bestMatch = null;
+        final List<ResourceTable.Resource> bestResources = new ArrayList<>();
         int maxScore = -1;
 
         for (final ResourceTable.Resource resource : resources) {
             int score = Locales.match(this.deviceConfig, resource);
             if (score > maxScore) {
-                bestMatch = resource;
+                bestResources.clear();
+                bestResources.add(resource);
                 maxScore = score;
             } else if (score == maxScore && score >= 0) {
-                // Precedence: Version -> Density
-                if (isBetterThan(resource, bestMatch, this.deviceConfig)) {
-                    bestMatch = resource;
-                }
+                bestResources.add(resource);
             }
         }
 
-        if (bestMatch != null) {
-            final ResourceEntry resourceEntry = bestMatch.resourceEntry;
+        for (ResourceTable.Resource resource : bestResources) {
+            final ResourceEntry resourceEntry = resource.resourceEntry;
             if (resourceEntry.value instanceof ResourceValue.ReferenceResourceValue) {
                 long nextId = ((ResourceValue.ReferenceResourceValue) resourceEntry.value).getReferenceResourceId();
                 icons.addAll(extractIconPathsById(nextId, attrName, visitedIds));
             } else {
                 final String path = resourceEntry.toStringValue(this.resourceTable, this.deviceConfig);
                 if (path != null) {
-                    if (bestMatch.type.density == Densities.DEFAULT || bestMatch.type.density == Densities.ANY) {
+                    if (resource.type.density == Densities.DEFAULT || resource.type.density == Densities.ANY) {
                         updateApkMetaIcon(path, attrName);
                     }
-                    icons.add(new IconPath(path, bestMatch.type.density));
+                    icons.add(new IconPath(path, resource.type.density, attrName));
                 }
             }
         }
@@ -443,9 +453,5 @@ public class ApkMetaTranslator implements XmlStreamer {
             }
         }
         return true;
-    }
-
-    private boolean matchLastTag(final String tag) {
-        return this.depth > 0 && this.tagStack[this.depth - 1].equals(tag);
     }
 }

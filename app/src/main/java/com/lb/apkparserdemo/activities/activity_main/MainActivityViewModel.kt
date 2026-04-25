@@ -73,6 +73,8 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
 
     private suspend fun performTests() {
         com.lb.apkparserdemo.utils.SessionTracker.clear()
+        appIconDao.deleteAll()
+        IconStorage.clearCache(applicationContext)
         val config = applicationContext.resources.configuration
         val localeList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             val list = config.locales
@@ -96,7 +98,9 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-//                    it.add("")
+                    //apps with blurry icons
+//                    it.add("com.lb.app_manager")
+//                    it.add("com.os.airforce")
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
@@ -146,17 +150,11 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             var appIcon: Bitmap? = null
             if (VALIDATE_RESOURCES) {
                 //check if the library can get app icon, if required
-                val targetResources = try {
-                    packageManager.getResourcesForApplication(packageInfo.applicationInfo!!)
-                } catch (e: Exception) {
-                    null
-                }
                 appIcon = ApkIconFetcher.getApkIcon(
                         context, deviceConfig, object : ApkIconFetcher.ZipFilterCreator {
                     override fun generateZipFilter(): AbstractZipFilter =
                             MultiZipFilter(allApkFilePaths.map { getZipFilter(it, ZIP_FILTER_TYPE) })
-                }, currentApkInfo, appIconSize, targetResources
-                )
+                }, currentApkInfo, appIconSize)
                 if (packageInfo.applicationInfo!!.icon != 0 && appIcon == null) {
                     failedGettingAppIconErrorsLiveData.inc()
                     if (isSystemApp) systemAppsErrorsCountLiveData.inc()

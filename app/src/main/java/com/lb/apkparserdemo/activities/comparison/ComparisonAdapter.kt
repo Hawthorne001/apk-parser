@@ -3,9 +3,6 @@ package com.lb.apkparserdemo.activities.comparison
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.Toast
@@ -60,10 +57,23 @@ class ComparisonAdapter : ListAdapter<AppIconInfo, RecyclerView.ViewHolder>(Diff
             }
 
             binding.root.setOnLongClickListener {
-                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                    data = Uri.fromParts("package", item.packageName, null)
+                val packageManager = context.packageManager
+                try {
+                    val packageInfo = packageManager.getPackageInfo(item.packageName, 0)
+                    val baseApkPath = packageInfo.applicationInfo?.publicSourceDir
+                    val splitApkPaths = packageInfo.applicationInfo?.splitPublicSourceDirs?.toList() ?: emptyList()
+                    val allApkFilePaths = mutableListOf<String>()
+                    baseApkPath?.let { allApkFilePaths.add(it) }
+                    allApkFilePaths.addAll(splitApkPaths)
+
+                    val adbCommands = allApkFilePaths.joinToString("\n") { "adb pull \"$it\"" }
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    val clip = ClipData.newPlainText("adb pull commands", adbCommands)
+                    clipboard.setPrimaryClip(clip)
+                    Toast.makeText(context, "Copied adb pull commands for ${item.packageName}", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
-                context.startActivity(intent)
                 true
             }
         }
