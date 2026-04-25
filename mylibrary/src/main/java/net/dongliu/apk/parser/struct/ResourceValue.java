@@ -317,6 +317,17 @@ public abstract class ResourceValue {
         }
     }
 
+    private static final float[] RADIX_MULTS = new float[]{
+            1.0f,
+            1.0f / (1 << 7),
+            1.0f / (1 << 15),
+            1.0f / (1 << 23)
+    };
+
+    private static float complexToFloat(int complex) {
+        return (complex >> 8) * RADIX_MULTS[(complex >> 4) & 3];
+    }
+
     private static class DimensionValue extends ResourceValue {
 
         private DimensionValue(final int value) {
@@ -325,7 +336,7 @@ public abstract class ResourceValue {
 
         @Override
         public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
-            final short unit = (short) (this.value & 0xff);
+            final short unit = (short) (this.value & 0xf);
             final String unitStr;
             switch (unit) {
                 case ResValue.ResDataCOMPLEX.UNIT_MM:
@@ -349,7 +360,7 @@ public abstract class ResourceValue {
                 default:
                     unitStr = "unknown unit:0x" + Integer.toHexString(unit);
             }
-            return (this.value >> 8) + unitStr;
+            return complexToFloat(this.value) + unitStr;
         }
     }
 
@@ -374,8 +385,7 @@ public abstract class ResourceValue {
                 default:
                     pstr = "unknown type:0x" + Integer.toHexString(type);
             }
-            final float f = Float.intBitsToFloat(this.value >> 4);
-            return f + pstr;
+            return (complexToFloat(this.value) * 100) + pstr;
         }
     }
 

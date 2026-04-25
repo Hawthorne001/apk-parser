@@ -41,7 +41,7 @@ class ComparisonAdapter : ListAdapter<AppIconInfo, RecyclerView.ViewHolder>(Diff
         fun bind(item: AppIconInfo) {
             binding.appNameTextView.text = item.appName
             binding.packageNameTextView.text = item.packageName
-            
+
             val context = binding.root.context
             val iconFile = IconStorage.getIconFile(context, item.iconFileName)
             binding.fetchedIconImageView.load(iconFile)
@@ -66,7 +66,7 @@ class ComparisonAdapter : ListAdapter<AppIconInfo, RecyclerView.ViewHolder>(Diff
                     baseApkPath?.let { allApkFilePaths.add(it) }
                     allApkFilePaths.addAll(splitApkPaths)
 
-                    val adbCommands = allApkFilePaths.joinToString("\n") { "adb pull \"$it\"" }
+                    val adbCommands = allApkFilePaths.joinToString("\n") { "./adb pull \"$it\"" }
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     val clip = ClipData.newPlainText("adb pull commands", adbCommands)
                     clipboard.setPrimaryClip(clip)

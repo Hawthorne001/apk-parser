@@ -98,9 +98,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-                    //apps with blurry icons
-//                    it.add("com.lb.app_manager")
-//                    it.add("com.os.airforce")
+//                    it.add("com.google.android.bluetooth")
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
