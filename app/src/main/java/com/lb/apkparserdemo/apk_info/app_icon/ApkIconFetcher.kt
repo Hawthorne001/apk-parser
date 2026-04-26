@@ -103,7 +103,7 @@ object ApkIconFetcher {
         }
 
         if (bestDrawable != null) {
-            val typeStr = getDetailedDrawableType(bestDrawable!!, bestPath)
+            val typeStr = getDetailedDrawableType(bestDrawable!!, bestPath, apkMeta.packageName)
             android.util.Log.d("AppLog", "icon fetching for ${apkMeta.packageName}: SUCCESS: $bestPath, type: $typeStr")
             val size = if (requestedAppIconSize > 0) requestedAppIconSize else AppInfoUtil.getAppIconSize(context)
             return bestDrawable!!.toBitmap(size, size)
@@ -136,13 +136,17 @@ object ApkIconFetcher {
         return false
     }
 
-    private fun getDetailedDrawableType(drawable: Drawable, path: String?): String {
+    private fun getDetailedDrawableType(drawable: Drawable, path: String?, packageName: String): String {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && drawable is AdaptiveIconDrawable) {
             val bg = drawable.background
             val fg = drawable.foreground
             val bgType = getDrawableType(bg)
             val fgType = getDrawableType(fg)
-            "Adaptive icon (BG: $bgType, FG: $fgType)"
+            val typeStr = "Adaptive icon (BG: $bgType, FG: $fgType)"
+            if (bgType == "Color" && fgType == "Color") {
+                android.util.Log.w("AppLog", "Warning: $typeStr detected for $packageName. Both layers are ColorDrawable, which is unusual.")
+            }
+            typeStr
         } else if (drawable is XmlDrawableParser.VectorBitmapDrawable) {
             "VectorDrawable (Rendered)"
         } else if (path?.endsWith(".xml") == true) {
@@ -209,10 +213,14 @@ object ApkIconFetcher {
             if (resId != 0) {
                 val packageId = resId shr 24
                 if (packageId == 0x01) {
+                    // System resources (package ID 0x01, e.g., @android:drawable/...) are not bundled in the APK.
+                    // We must resolve them using the current device's framework resources.
                     try {
                         val drawable = androidx.core.content.res.ResourcesCompat.getDrawable(context.resources, resId, null)
                         if (drawable != null) return drawable
-                    } catch (e: Exception) {}
+                    } catch (e: Exception) {
+                        // Fallback or ignore if the device doesn't have this specific system resource
+                    }
                 } else {
                     try {
                         val resources = apkInfo.resourceTable.getResourcesById(resId.toLong())

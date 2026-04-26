@@ -15,8 +15,8 @@
 
         <ImageView
             android:id="@+id/fetchedIconImageView"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="@dimen/app_icon_size"
+            android:layout_height="@dimen/app_icon_size"
             android:layout_gravity="center"
             tools:src="@tools:sample/avatars" />
     </FrameLayout>
@@ -41,6 +41,15 @@
             android:layout_height="wrap_content"
             android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
             tools:text="com.example.package" />
+
+        <TextView
+            android:id="@+id/comparisonResultTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+            android:textStyle="bold"
+            tools:text="Perfect Match" />
     </LinearLayout>
 
     <FrameLayout
@@ -50,8 +59,8 @@
 
         <ImageView
             android:id="@+id/frameworkIconImageView"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="@dimen/app_icon_size"
+            android:layout_height="@dimen/app_icon_size"
             android:layout_gravity="center"
             tools:src="@tools:sample/avatars" />
     </FrameLayout>

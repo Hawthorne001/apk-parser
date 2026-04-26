@@ -12,10 +12,9 @@ import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.lb.apkparserdemo.databinding.ItemAppComparisonBinding
 import com.lb.apkparserdemo.databinding.ItemComparisonHeaderBinding
-import com.lb.apkparserdemo.db.AppIconInfo
 import com.lb.apkparserdemo.utils.IconStorage
 
-class ComparisonAdapter : ListAdapter<AppIconInfo, RecyclerView.ViewHolder>(DiffCallback) {
+class ComparisonAdapter : ListAdapter<ComparisonItem, RecyclerView.ViewHolder>(DiffCallback) {
 
     companion object {
         private const val TYPE_HEADER = 0
@@ -31,35 +30,56 @@ class ComparisonAdapter : ListAdapter<AppIconInfo, RecyclerView.ViewHolder>(Diff
         return if (count > 0) count + 1 else 0
     }
 
-    override fun getItem(position: Int): AppIconInfo {
+    override fun getItem(position: Int): ComparisonItem {
         return super.getItem(position - 1)
     }
 
     class HeaderViewHolder(binding: ItemComparisonHeaderBinding) : RecyclerView.ViewHolder(binding.root)
 
     class ItemViewHolder(private val binding: ItemAppComparisonBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(item: AppIconInfo) {
-            binding.appNameTextView.text = item.appName
-            binding.packageNameTextView.text = item.packageName
+        fun bind(item: ComparisonItem) {
+            val info = item.info
+            binding.appNameTextView.text = info.appName
+            binding.packageNameTextView.text = info.packageName
 
             val context = binding.root.context
-            val iconFile = IconStorage.getIconFile(context, item.iconFileName)
+            val iconFile = IconStorage.getIconFile(context, info.iconFileName)
             binding.fetchedIconImageView.load(iconFile)
 
-            val frameworkIconFile = IconStorage.getIconFile(context, item.frameworkIconFileName)
+            val frameworkIconFile = IconStorage.getIconFile(context, info.frameworkIconFileName)
             binding.frameworkIconImageView.load(frameworkIconFile)
+
+            val score = item.matchScore
+            if (score != null) {
+                val percentage = (score * 100).toInt()
+                binding.comparisonResultTextView.text = if (score == 1.0f) {
+                    "Perfect Match (100%)"
+                } else {
+                    "Match Score: $percentage%"
+                }
+                binding.comparisonResultTextView.setTextColor(if (score == 1.0f) {
+                    android.graphics.Color.GREEN
+                } else if (score > 0.9f) {
+                    android.graphics.Color.YELLOW
+                } else {
+                    android.graphics.Color.RED
+                })
+            } else {
+                binding.comparisonResultTextView.text = "Comparing..."
+                binding.comparisonResultTextView.setTextColor(android.graphics.Color.GRAY)
+            }
 
             binding.root.setOnClickListener {
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText("package name", item.packageName)
+                val clip = ClipData.newPlainText("package name", info.packageName)
                 clipboard.setPrimaryClip(clip)
-                Toast.makeText(context, "Copied: ${item.packageName}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Copied: ${info.packageName}", Toast.LENGTH_SHORT).show()
             }
 
             binding.root.setOnLongClickListener {
                 val packageManager = context.packageManager
                 try {
-                    val packageInfo = packageManager.getPackageInfo(item.packageName, 0)
+                    val packageInfo = packageManager.getPackageInfo(info.packageName, 0)
                     val baseApkPath = packageInfo.applicationInfo?.publicSourceDir
                     val splitApkPaths = packageInfo.applicationInfo?.splitPublicSourceDirs?.toList() ?: emptyList()
                     val allApkFilePaths = mutableListOf<String>()
@@ -70,7 +90,7 @@ class ComparisonAdapter : ListAdapter<AppIconInfo, RecyclerView.ViewHolder>(Diff
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     val clip = ClipData.newPlainText("adb pull commands", adbCommands)
                     clipboard.setPrimaryClip(clip)
-                    Toast.makeText(context, "Copied adb pull commands for ${item.packageName}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Copied adb pull commands for ${info.packageName}", Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
                     Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
@@ -94,11 +114,11 @@ class ComparisonAdapter : ListAdapter<AppIconInfo, RecyclerView.ViewHolder>(Diff
         }
     }
 
-    object DiffCallback : DiffUtil.ItemCallback<AppIconInfo>() {
-        override fun areItemsTheSame(oldItem: AppIconInfo, newItem: AppIconInfo): Boolean =
-            oldItem.packageName == newItem.packageName
+    object DiffCallback : DiffUtil.ItemCallback<ComparisonItem>() {
+        override fun areItemsTheSame(oldItem: ComparisonItem, newItem: ComparisonItem): Boolean =
+            oldItem.info.packageName == newItem.info.packageName
 
-        override fun areContentsTheSame(oldItem: AppIconInfo, newItem: AppIconInfo): Boolean =
+        override fun areContentsTheSame(oldItem: ComparisonItem, newItem: ComparisonItem): Boolean =
             oldItem == newItem
     }
 }

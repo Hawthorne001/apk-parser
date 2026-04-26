@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.os.Build
 import android.util.Log
 import androidx.annotation.UiThread
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.lb.apkparserdemo.apk_info.AbstractZipFilter
@@ -94,11 +95,28 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         val context = applicationContext
         val appIconSize = AppInfoUtil.getAppIconSize(context)
         val packageManager = context.packageManager
-        Log.d("AppLog", "getting all package infos: deviceConfig:$deviceConfig")
+        Log.d("AppLog", "getting all package infos: deviceConfig:$deviceConfig appIconSize:$appIconSize")
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-//                    it.add("com.google.android.bluetooth")
+//                    glitches in foreground:
+//                                        it.add("com.google.android.apps.tips")
+//                                        it.add("rk.android.app.shortcutmaker")
+
+//no foreground icon:
+                                        it.add("com.syc.tool.screensize")
+//                    wrong foreground/background color:
+//                                        it.add("com.google.android.captiveportallogin")
+//                                        it.add("com.android.bips")
+//                                        it.add("com.microsoft.emmx")
+//                                        it.add("com.facebook.katana")
+//                                        it.add("com.facebook.orca")
+//                                        it.add("net.quetta.browser")
+//                                        it.add("com.google.android.gms.supervision")
+//                                        it.add("org.telegram.messenger")
+
+
+
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
@@ -230,7 +248,8 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                         val savedLib = IconStorage.saveIcon(context, libIconFileName, appIcon)
 
                         val frameworkIcon = try {
-                            packageManager.getApplicationIcon(packageInfo.applicationInfo!!)
+                            val drawable = packageManager.getApplicationIcon(packageInfo.applicationInfo!!)
+                            drawable.toBitmap(appIconSize, appIconSize)
                         } catch (_: Exception) {
                             null
                         }

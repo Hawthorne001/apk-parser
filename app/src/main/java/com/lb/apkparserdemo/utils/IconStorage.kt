@@ -1,14 +1,11 @@
 package com.lb.apkparserdemo.utils
 
-import android.app.ActivityManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import androidx.core.graphics.drawable.toBitmap
-import com.lb.apkparserdemo.apk_info.app_icon.ViewUtil
-import com.lb.common_utils.getSystemServiceCompat
 import java.io.File
 import java.io.FileOutputStream
 
@@ -20,14 +17,7 @@ object IconStorage {
     fun getAppIconSize(context: Context): Int {
         if (appIconSize > 0)
             return appIconSize
-        val activityManager: ActivityManager = context.getSystemServiceCompat()
-        //https://console.firebase.google.com/u/0/project/app-manager-cdf2c/crashlytics/app/android:com.lb.app_manager/issues/d5c98cf94a3d87148b915413f2583657?time=last-seven-days&sessionId=5D4B95C60017000214A7E2D1546BCD11_DNE_0_v2
-        //TODO maybe after API 24 it's not needed to use try-catch
-        appIconSize = try {
-            activityManager.launcherLargeIconSize
-        } catch (e: Exception) {
-            ViewUtil.convertDpToPixels(context, 48f).toInt()
-        }
+        appIconSize = context.resources.getDimensionPixelSize(com.lb.apkparserdemo.R.dimen.app_icon_size)
         return appIconSize
     }
 
