@@ -101,8 +101,8 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                 .also {
                 //these apps have tinting done by the OS, so can't do anything about them other than
                     // trying an honest parsing from the OS (getPackageArchiveInfo if it's a single APK,
-                    it.add("com.google.android.captiveportallogin")
-                    it.add("com.android.bips")
+//                    it.add("com.google.android.captiveportallogin")
+//                    it.add("com.android.bips")
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
@@ -118,10 +118,6 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             val isSystemApp = packageInfo.isSystemApp()
 
             val baseApkPath = packageInfo.applicationInfo!!.publicSourceDir
-//            val appIconFromApkAlone=packageManager.getPackageArchiveInfo(baseApkPath,0)?.applicationInfo?.let {applicationInfo->
-//                val bitamp=packageManager.getApplicationIcon(applicationInfo).toBitmap()
-//                Log.d("AppLog", "got bitmap?${bitamp!=null}")
-//            }
             val splitApkPaths = packageInfo.applicationInfo!!.splitPublicSourceDirs?.toList()
                     ?: emptyList()
             val allApkFilePaths = listOf(baseApkPath) + splitApkPaths

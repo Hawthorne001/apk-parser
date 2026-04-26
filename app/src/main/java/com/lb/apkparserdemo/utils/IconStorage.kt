@@ -5,21 +5,11 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
-import androidx.core.graphics.drawable.toBitmap
 import java.io.File
 import java.io.FileOutputStream
 
 object IconStorage {
-    private var appIconSize = 0
-
     private const val ICONS_DIR = "cached_icons"
-
-    fun getAppIconSize(context: Context): Int {
-        if (appIconSize > 0)
-            return appIconSize
-        appIconSize = context.resources.getDimensionPixelSize(com.lb.apkparserdemo.R.dimen.app_icon_size)
-        return appIconSize
-    }
 
     fun saveIcon(context: Context, fileName: String, bitmap: Bitmap): Boolean {
         val dir = File(context.filesDir, ICONS_DIR)
@@ -36,12 +26,6 @@ object IconStorage {
             e.printStackTrace()
             false
         }
-    }
-
-    fun saveIcon(context: Context, fileName: String, drawable: Drawable): Boolean {
-        val appIconSize = getAppIconSize(context)
-        val bitmap = drawable.toBitmap(width = appIconSize, height = appIconSize)
-        return saveIcon(context, fileName, bitmap)
     }
 
     fun deleteIcon(context: Context, fileName: String) {
