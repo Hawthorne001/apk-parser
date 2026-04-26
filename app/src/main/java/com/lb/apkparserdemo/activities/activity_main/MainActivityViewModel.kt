@@ -99,20 +99,10 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-//                    it.add("com.google.android.deskclock")
-//                    it.add("com.google.android.apps.pixel.dcservice")
-//                    it.add("com.google.android.apps.tips")
-//                    it.add("com.google.android.apps.dreamliner")
-//                    it.add("com.google.android.captiveportallogin")
-//                    it.add("com.android.bips")
-//                    it.add("com.ebay.mobile")
-//                    it.add("com.kroegerama.appchecker")
-//                    it.add("com.authy.authy")
-//                    it.add("org.mozilla.firefox_beta")
-//                    it.add("com.google.android.apps.wallpaper")
-//                    it.add("com.google.pixel.livewallpaper")
-//                    it.add("com.tinder")
-//                    it.add("com.lb.vocalearn")
+                //these apps have tinting done by the OS, so can't do anything about them other than
+                    // trying an honest parsing from the OS (getPackageArchiveInfo if it's a single APK,
+                    it.add("com.google.android.captiveportallogin")
+                    it.add("com.android.bips")
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
