@@ -100,25 +100,10 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         val appsToFocusOn = HashSet<String>()
                 .also {
 ////                    glitches in foreground:
-                                        it.add("com.google.android.apps.tips")
-                                                        it.add("com.kroegerama.appchecker")
-                                                            it.add("com.authy.authy")
-                                                            it.add("com.google.android.deskclock")
-                                                            it.add("com.android.omadm.service")
-                                                            it.add("com.ebay.mobile")
-                                                            it.add("org.mozilla.firefox_beta")
-                                                            it.add("com.evo.inware")
-                                                            it.add("net.hubalek.android.apps.myandroidearnings")
-                                                            it.add("com.google.pixel.livewallpaper")
-                                                            it.add("com.google.android.apps.dreamliner")
-                                                            it.add("com.tinder")
-                                                            it.add("com.lb.vocalearn")
-                                                            it.add("com.google.android.apps.wallpaper")
-
-
+//                                                            it.add("com.google.android.deskclock")
 ////                    wrong foreground/background color:
-                                        it.add("com.google.android.captiveportallogin")
-                                        it.add("com.android.bips")
+//                                        it.add("com.google.android.captiveportallogin")
+//                                        it.add("com.android.bips")
 
 
 

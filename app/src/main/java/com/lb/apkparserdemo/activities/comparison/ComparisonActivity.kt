@@ -1,14 +1,18 @@
 package com.lb.apkparserdemo.activities.comparison
 
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.lb.apkparserdemo.R
 import com.lb.apkparserdemo.activities.activity_main.BoundActivity
 import com.lb.apkparserdemo.databinding.ActivityComparisonBinding
 
@@ -50,5 +54,21 @@ class ComparisonActivity : BoundActivity<ActivityComparisonBinding>(ActivityComp
             binding.progressBar.isVisible = it
             if (it) binding.recyclerView.isVisible = false
         }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_comparison, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == R.id.action_toggle_theme) {
+            val isDark = AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_YES
+            AppCompatDelegate.setDefaultNightMode(
+                if (isDark) AppCompatDelegate.MODE_NIGHT_NO else AppCompatDelegate.MODE_NIGHT_YES
+            )
+            return true
+        }
+        return super.onOptionsItemSelected(item)
     }
 }

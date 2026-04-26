@@ -60,7 +60,7 @@ class ComparisonAdapter : ListAdapter<ComparisonItem, RecyclerView.ViewHolder>(D
                 binding.comparisonResultTextView.setTextColor(if (score == 1.0f) {
                     android.graphics.Color.GREEN
                 } else if (score > 0.9f) {
-                    android.graphics.Color.YELLOW
+                    0xFFFFA500.toInt() // Orange
                 } else {
                     android.graphics.Color.RED
                 })
