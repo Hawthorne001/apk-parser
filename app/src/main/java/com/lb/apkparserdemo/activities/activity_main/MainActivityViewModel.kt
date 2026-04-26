@@ -108,6 +108,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
 //                    it.add("com.google.android.packageinstaller")
 //                    it.add("com.android.printspooler")
 //                    it.add("com.android.traceur")
+//                                        it.add("rk.android.app.shortcutmaker")
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
@@ -239,13 +240,19 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                         val savedLib = IconStorage.saveIcon(context, libIconFileName, appIcon)
 
                         val frameworkIcon = try {
-                            val appInfo = packageInfo.applicationInfo!!
-                            val appResources = packageManager.getResourcesForApplication(appInfo)
-                            val iconResId = appInfo.icon
+                            val baseApkPath = packageInfo.applicationInfo!!.publicSourceDir
 
-                            // To match the library's "honest" parsing and avoid Material You theme pollution,
-                            // we fetch the drawable from the app's resources without a theme.
-                            // We also use a high density if possible to reduce blurriness for 108dp icons.
+                            // To get a truly "honest" and unthemed icon from the framework, we load the APK
+                            // as if it weren't installed using getPackageArchiveInfo.
+                            // This helps bypass Material You dynamic color overlays (RROs) applied to installed apps.
+                            val archiveInfo = packageManager.getPackageArchiveInfo(baseApkPath, 0)
+                            val cleanAppInfo = archiveInfo?.applicationInfo ?: packageInfo.applicationInfo!!
+                            cleanAppInfo.sourceDir = baseApkPath
+                            cleanAppInfo.publicSourceDir = baseApkPath
+
+                            val appResources = packageManager.getResourcesForApplication(cleanAppInfo)
+                            val iconResId = cleanAppInfo.icon
+
                             val standardSizePx = 48 * (densityDpi / 160f)
                             val targetDensityDpi = if (appIconSize > 0) {
                                 (densityDpi * (appIconSize / standardSizePx)).toInt()
@@ -255,9 +262,9 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                                 try {
                                     androidx.core.content.res.ResourcesCompat.getDrawableForDensity(appResources, iconResId, targetDensityDpi, null)
                                 } catch (_: Exception) {
-                                    packageManager.getApplicationIcon(appInfo)
+                                    packageManager.getApplicationIcon(packageInfo.applicationInfo!!)
                                 }
-                            } else packageManager.getApplicationIcon(appInfo)
+                            } else packageManager.getApplicationIcon(packageInfo.applicationInfo!!)
 
                             drawable?.toBitmap(appIconSize, appIconSize)
                         } catch (_: Exception) {
