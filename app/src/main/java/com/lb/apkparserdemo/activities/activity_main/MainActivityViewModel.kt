@@ -99,10 +99,15 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-                //these apps have tinting done by the OS, so can't do anything about them other than
-                    // trying an honest parsing from the OS (getPackageArchiveInfo if it's a single APK,
+                    //these apps have tinting done by the OS, so can't do anything about them other than
+                    // trying an honest parsing from the OS (getPackageArchiveInfo if it's a single APK)
 //                    it.add("com.google.android.captiveportallogin")
 //                    it.add("com.android.bips")
+//                    These apps somehow get the correct color though, while getPackageArchiveInfo would make them use a different color:
+//                    it.add("com.google.android.flipendo")
+//                    it.add("com.google.android.packageinstaller")
+//                    it.add("com.android.printspooler")
+//                    it.add("com.android.traceur")
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
