@@ -38,12 +38,12 @@ object ApkIconFetcher {
         val apkMeta = apkInfo.apkMetaTranslator.apkMeta
         val iconPaths = apkInfo.apkMetaTranslator.iconPaths
         if (iconPaths.isEmpty()) {
-            android.util.Log.d("AppLog", "icon fetching: no icon paths found in manifest")
+//            android.util.Log.d("AppLog", "icon fetching: no icon paths found in manifest")
             return null
         }
 
         val densityDpi = context.resources.displayMetrics.densityDpi
-        android.util.Log.d("AppLog", "icon fetching for ${apkMeta.packageName}: target densityDpi: $densityDpi, found ${iconPaths.size} icon paths")
+//        android.util.Log.d("AppLog", "icon fetching for ${apkMeta.packageName}: target densityDpi: $densityDpi, found ${iconPaths.size} icon paths")
 
         val sortedIconPaths = iconPaths.sortedWith(Comparator { o1: IconPath, o2: IconPath ->
             if (o1.density == o2.density) {
@@ -96,7 +96,7 @@ object ApkIconFetcher {
                             }
                         }
                     } catch (e: Exception) {
-                        android.util.Log.d("AppLog", "icon fetching: exception decoding $path: ${e.message}")
+//                        android.util.Log.d("AppLog", "icon fetching: exception decoding $path: ${e.message}")
                     }
                 }
             }
@@ -104,7 +104,7 @@ object ApkIconFetcher {
 
         if (bestDrawable != null) {
             val typeStr = getDetailedDrawableType(bestDrawable!!, bestPath, apkMeta.packageName)
-            android.util.Log.d("AppLog", "icon fetching for ${apkMeta.packageName}: SUCCESS: $bestPath, type: $typeStr")
+//            android.util.Log.d("AppLog", "icon fetching for ${apkMeta.packageName}: SUCCESS: $bestPath, type: $typeStr")
             val size = if (requestedAppIconSize > 0) requestedAppIconSize else AppInfoUtil.getAppIconSize(context)
             return bestDrawable!!.toBitmap(size, size)
         }
@@ -116,7 +116,7 @@ object ApkIconFetcher {
                 val bitmap = createBitmap(size, size)
                 val canvas = Canvas(bitmap)
                 canvas.drawColor(color)
-                android.util.Log.d("AppLog", "icon fetching for ${apkMeta.packageName}: SUCCESS with Color: $colorPath")
+//                android.util.Log.d("AppLog", "icon fetching for ${apkMeta.packageName}: SUCCESS with Color: $colorPath")
                 return bitmap
             } catch (e: Exception) {}
         }
@@ -143,9 +143,9 @@ object ApkIconFetcher {
             val bgType = getDrawableType(bg)
             val fgType = getDrawableType(fg)
             val typeStr = "Adaptive icon (BG: $bgType, FG: $fgType)"
-            if (bgType == "Color" && fgType == "Color") {
-                android.util.Log.w("AppLog", "Warning: $typeStr detected for $packageName. Both layers are ColorDrawable, which is unusual.")
-            }
+//            if (bgType == "Color" && fgType == "Color") {
+//                android.util.Log.w("AppLog", "Warning: $typeStr detected for $packageName. Both layers are ColorDrawable, which is unusual.")
+//            }
             typeStr
         } else if (drawable is XmlDrawableParser.VectorBitmapDrawable) {
             "VectorDrawable (Rendered)"

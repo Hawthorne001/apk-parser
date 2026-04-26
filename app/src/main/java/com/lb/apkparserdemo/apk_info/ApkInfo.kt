@@ -93,7 +93,6 @@ class ApkInfo(
             try {
                 binaryXmlParser.parse()
             } catch (e: Throwable) {
-                e.printStackTrace()
 //                android.util.Log.e("AppLog", "error: CRITICAL error during binaryXmlParser.parse()", e)
                 throw e
             }
@@ -170,8 +169,7 @@ class ApkInfo(
                         return@forEach
                     }
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
+            } catch (_: Exception) {
             }
             return ApkInfo(xmlTranslator, apkMetaTranslator, apkType, resourceTable, allLocales)
         }

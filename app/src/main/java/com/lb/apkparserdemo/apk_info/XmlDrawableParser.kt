@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.InsetDrawable
 import android.graphics.drawable.LayerDrawable
@@ -53,15 +52,13 @@ object XmlDrawableParser {
         val buffer = ByteBuffer.wrap(binXml).order(ByteOrder.LITTLE_ENDIAN)
         if (buffer.short.toInt() != 0x0003) return null
 
-        android.util.Log.d("AppLogXML", "tryParseDrawable size=${binXml.size}, requestedSize=$requestedAppIconSize, isLayer=$isLayer")
+//        android.util.Log.d("AppLogXML", "tryParseDrawable size=${binXml.size}, requestedSize=$requestedAppIconSize, isLayer=$isLayer")
         val streamer = DrawableStreamer(context, apkInfo, deviceConfig, requestedAppIconSize, isLayer, subResourceProvider)
         val parser = BinaryXmlParser(ByteBuffer.wrap(binXml), apkInfo.resourceTable, streamer, deviceConfig)
         return try {
             parser.parse()
             streamer.result
-        } catch (e: Exception) {
-            android.util.Log.e("AppLog", "icon fetching: exception in BinaryXmlParser while parsing XML: ${e.message}")
-            e.printStackTrace()
+        } catch (_: Exception) {
             null
         }
     }
@@ -147,7 +144,7 @@ object XmlDrawableParser {
                 }
             }
             logSb.append(">")
-            android.util.Log.d("AppLogXML", logSb.toString())
+//            android.util.Log.d("AppLogXML", logSb.toString())
 
             when (name) {
                 "vector" -> {
@@ -320,7 +317,7 @@ object XmlDrawableParser {
             val logSb = StringBuilder()
             repeat(depth) { logSb.append("  ") }
             logSb.append("</$name>")
-            android.util.Log.d("AppLogXML", logSb.toString())
+//            android.util.Log.d("AppLogXML", logSb.toString())
 
             when (name) {
                 "vector" -> {
@@ -355,9 +352,9 @@ object XmlDrawableParser {
                         val fg = builder.foreground
                                 ?: android.graphics.Color.TRANSPARENT.toDrawable()
 
-                        if (bg is ColorDrawable && fg is ColorDrawable && (bg as ColorDrawable).color == android.graphics.Color.TRANSPARENT && (fg as ColorDrawable).color == android.graphics.Color.TRANSPARENT) {
-                            android.util.Log.w("AppLog", "Warning: Adaptive icon for ${apkInfo.apkMetaTranslator.apkMeta.packageName} has both background and foreground as transparent ColorDrawable. This is suspicious.")
-                        }
+//                        if (bg is ColorDrawable && fg is ColorDrawable && (bg as ColorDrawable).color == android.graphics.Color.TRANSPARENT && (fg as ColorDrawable).color == android.graphics.Color.TRANSPARENT) {
+//                            android.util.Log.w("AppLog", "Warning: Adaptive icon for ${apkInfo.apkMetaTranslator.apkMeta.packageName} has both background and foreground as transparent ColorDrawable. This is suspicious.")
+//                        }
 
                         val drawable = AdaptiveIconDrawable(bg, fg)
                         handleFinishedDrawable(drawable)
@@ -506,7 +503,7 @@ object XmlDrawableParser {
         }
 
         private fun String.parseInset(totalSize: Int): Int {
-            android.util.Log.d("AppLogXML", "parseInset: value=\"$this\", totalSize=$totalSize")
+//            android.util.Log.d("AppLogXML", "parseInset: value=\"$this\", totalSize=$totalSize")
             if (endsWith("%")) {
                 val percentString = filter { it.isDigit() || it == '.' || it == 'E' || it == 'e' || it == '-' }
                 val percent = percentString.toFloatOrNull() ?: 0f

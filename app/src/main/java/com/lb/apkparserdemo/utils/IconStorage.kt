@@ -23,8 +23,7 @@ object IconStorage {
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
             }
             true
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
             false
         }
     }
