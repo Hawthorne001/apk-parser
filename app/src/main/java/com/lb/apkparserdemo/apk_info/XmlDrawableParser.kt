@@ -254,7 +254,7 @@ object XmlDrawableParser {
                     val drawablePath = attr.getAttr("drawable")
                     val drawable = if (drawablePath != null) resolve(drawablePath, isLayer || isInsideAdaptiveLayer) else null
                     val item = LayerItem(drawable)
-                    val baseSize = if (requestedAppIconSize > 0) requestedAppIconSize else 108
+                    val baseSize = if (requestedAppIconSize > 0) (requestedAppIconSize * (108.0 / 72.0)).toInt() else 108
                     item.width = attr.getAttr("width")?.parseInset(baseSize) ?: -1
                     item.height = attr.getAttr("height")?.parseInset(baseSize) ?: -1
                     item.gravity = parseGravity(attr.getAttr("gravity"))
@@ -341,7 +341,7 @@ object XmlDrawableParser {
                 }
                 "shape" -> {
                     val builder = drawableStack.pop() as ShapeBuilder
-                    val baseSize = if (requestedAppIconSize > 0) requestedAppIconSize else 108
+                    val baseSize = if (requestedAppIconSize > 0) (requestedAppIconSize * (108.0 / 72.0)).toInt() else 108
                     val drawable = if (builder.brush != null) {
                         imageBrushDrawable(context, builder.brush!!, baseSize)
                     } else if (builder.color != null) {
@@ -387,7 +387,7 @@ object XmlDrawableParser {
                 }
                 "inset" -> {
                     val builder = drawableStack.pop() as InsetBuilder
-                    val baseSize = if (requestedAppIconSize > 0) requestedAppIconSize else 108
+                    val baseSize = if (requestedAppIconSize > 0) (requestedAppIconSize * (108.0 / 72.0)).toInt() else 108
                     val l = builder.insetLeft?.parseInset(baseSize) ?: 0
                     val t = builder.insetTop?.parseInset(baseSize) ?: 0
                     val r = builder.insetRight?.parseInset(baseSize) ?: 0
@@ -579,8 +579,9 @@ object XmlDrawableParser {
 
     private fun imageVectorToDrawable(context: Context, imageVector: ImageVector, requestedAppIconSize: Int = 0, isLayer: Boolean = false, alpha: Float = 1f): Drawable {
         val density = Density(context.resources.displayMetrics.density)
-        val widthPx = if (requestedAppIconSize > 0) requestedAppIconSize else with(density) { 108.dp.toPx() }.toInt().coerceAtLeast(1)
-        val heightPx = if (requestedAppIconSize > 0) requestedAppIconSize else with(density) { 108.dp.toPx() }.toInt().coerceAtLeast(1)
+        val layerSizePx = if (requestedAppIconSize > 0) (requestedAppIconSize * 1.5f) else with(density) { 108.dp.toPx() }
+        val widthPx = if (requestedAppIconSize > 0) (if (isLayer) layerSizePx.toInt() else requestedAppIconSize) else with(density) { imageVector.defaultWidth.toPx() }.toInt().coerceAtLeast(1)
+        val heightPx = if (requestedAppIconSize > 0) (if (isLayer) layerSizePx.toInt() else requestedAppIconSize) else with(density) { imageVector.defaultHeight.toPx() }.toInt().coerceAtLeast(1)
 
         val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
         bitmap.density = context.resources.displayMetrics.densityDpi

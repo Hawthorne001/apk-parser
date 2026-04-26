@@ -253,14 +253,9 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                             val appResources = packageManager.getResourcesForApplication(cleanAppInfo)
                             val iconResId = cleanAppInfo.icon
 
-                            val standardSizePx = 48 * (densityDpi / 160f)
-                            val targetDensityDpi = if (appIconSize > 0) {
-                                (densityDpi * (appIconSize / standardSizePx)).toInt()
-                            } else densityDpi
-
                             val drawable = if (iconResId != 0) {
                                 try {
-                                    androidx.core.content.res.ResourcesCompat.getDrawableForDensity(appResources, iconResId, targetDensityDpi, null)
+                                    androidx.core.content.res.ResourcesCompat.getDrawableForDensity(appResources, iconResId, densityDpi, null)
                                 } catch (_: Exception) {
                                     packageManager.getApplicationIcon(packageInfo.applicationInfo!!)
                                 }
