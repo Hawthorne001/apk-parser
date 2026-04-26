@@ -13,6 +13,7 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.LayerDrawable
 import android.os.Build
 import androidx.core.graphics.drawable.toBitmap
+import com.lb.apkparserdemo.activities.activity_main.MainActivityViewModel
 import com.lb.apkparserdemo.apk_info.AbstractZipFilter
 import com.lb.apkparserdemo.apk_info.ApkInfo
 import com.lb.apkparserdemo.apk_info.XmlDrawableParser
@@ -43,8 +44,6 @@ object ApkIconFetcher {
         val densityDpi = context.resources.displayMetrics.densityDpi
         android.util.Log.d("AppLog", "icon fetching for ${apkMeta.packageName}: target densityDpi: $densityDpi, found ${iconPaths.size} icon paths")
 
-        // Custom sorting for density: ANY is best, then prefer higher density over lower density if possible.
-        // Also prefer launcher-activity-icon over application icon if densities are equal.
         val sortedIconPaths = iconPaths.sortedWith(Comparator { o1: IconPath, o2: IconPath ->
             if (o1.density == o2.density) {
                 val isActivity1 = o1.attrName != null && o1.attrName!!.contains("activity")
@@ -121,6 +120,73 @@ object ApkIconFetcher {
             } catch (e: Exception) {}
         }
         return null
+    }
+
+    /**
+     * Alternative icon fetcher that uses the Android Framework to handle split APKs
+     * but can optionally use our "Honest" internal renderer to bypass OS theme overlays.
+     */
+    fun getHonestApkIcon(
+        context: Context,
+        packageName: String,
+        requestedAppIconSize: Int = 0,
+        useHonestWork: Boolean = true
+    ): Bitmap? {
+        return try {
+            val pm = context.packageManager
+            val appInfo = pm.getApplicationInfo(packageName, 0)
+            if (useHonestWork) {
+                val apkPaths = mutableListOf<String>()
+                apkPaths.add(appInfo.publicSourceDir)
+                appInfo.splitPublicSourceDirs?.let { apkPaths.addAll(it) }
+
+                val filters = apkPaths.map { path ->
+                    MainActivityViewModel.getZipFilter(path, MainActivityViewModel.Companion.ZipFilterType.ZipFileFilter)
+                }
+                
+                val apkInfo = try {
+                    ApkInfo.getConsolidatedApkInfo(null, filters, requestParseManifestXmlTagForApkType = false, requestParseResources = true)
+                } finally {
+                    filters.forEach { try { it.close() } catch (ignored: Exception) {} }
+                }
+                
+                if (apkInfo == null) return null
+
+                val resources = pm.getResourcesForApplication(appInfo)
+                val iconResId = appInfo.icon
+                if (iconResId == 0) return null
+
+                val value = android.util.TypedValue()
+                resources.getValue(iconResId, value, true)
+                val iconPath = value.string?.toString() ?: return null
+
+                resources.openRawResource(iconResId).use { inputStream ->
+                    val bytes = inputStream.readBytes()
+                    if (iconPath.endsWith(".xml")) {
+                        val subResourceProvider: (String) -> ByteArray? = { path ->
+                            try {
+                                val resName = path.substringAfterLast("/").substringBeforeLast(".")
+                                val resType = path.substringBeforeLast("/").substringAfterLast("/")
+                                val subId = resources.getIdentifier(resName, resType, packageName)
+                                if (subId != 0) resources.openRawResource(subId).use { it.readBytes() } else null
+                            } catch (e: Exception) { null }
+                        }
+                        val drawable = XmlDrawableParser.tryParseDrawable(context, bytes, apkInfo, null, requestedAppIconSize, false, subResourceProvider)
+                        val size = if (requestedAppIconSize > 0) requestedAppIconSize else AppInfoUtil.getAppIconSize(context)
+                        drawable?.toBitmap(size, size)
+                    } else {
+                        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    }
+                }
+            } else {
+                val drawable = pm.getApplicationIcon(appInfo)
+                val size = if (requestedAppIconSize > 0) requestedAppIconSize else AppInfoUtil.getAppIconSize(context)
+                drawable.toBitmap(size, size)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("AppLog", "getHonestApkIcon failed for $packageName: ${e.message}")
+            null
+        }
     }
 
     private fun isBetterDrawable(candidate: Drawable, current: Drawable): Boolean {
@@ -213,13 +279,10 @@ object ApkIconFetcher {
             if (resId != 0) {
                 val packageId = resId shr 24
                 if (packageId == 0x01) {
-                    // System resources (package ID 0x01, e.g., @android:drawable/...) are not bundled in the APK.
-                    // We must resolve them using the current device's framework resources.
                     try {
                         val drawable = androidx.core.content.res.ResourcesCompat.getDrawable(context.resources, resId, null)
                         if (drawable != null) return drawable
                     } catch (e: Exception) {
-                        // Fallback or ignore if the device doesn't have this specific system resource
                     }
                 } else {
                     try {

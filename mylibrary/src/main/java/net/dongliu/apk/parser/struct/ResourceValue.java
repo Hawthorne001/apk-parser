@@ -17,7 +17,11 @@ import java.util.List;
  * @author dongliu
  */
 public abstract class ResourceValue {
-    protected final int value;
+    /**
+     * The raw integer value of the resource.
+     * Made public to allow easy access in rendering logic without reflection.
+     */
+    public final int value;
 
     protected ResourceValue(final int value) {
         this.value = value;
@@ -138,9 +142,6 @@ public abstract class ResourceValue {
         public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
             if (this.value >= 0) {
                 String result = this.stringPool.get(this.value);
-//                if (result == null) {
-//                    android.util.Log.d("AppLog", "label fetching: StringPool returned null for index 0x" + Integer.toHexString(this.value) + " (pool length: " + stringPool.length() + ")");
-//                }
                 return result;
             } else {
                 return null;
@@ -213,14 +214,9 @@ public abstract class ResourceValue {
             return null;
         }
 
-        /**
-         * Rudimentary configuration specificity comparison.
-         * Returns true if 'candidate' is a better match than 'current'.
-         */
         private boolean isBetterThan(ResourceTable.Resource candidate, ResourceTable.Resource current, @Nullable DeviceConfig requestedConfig) {
             if (current == null) return true;
 
-            // 1. MCC/MNC matching is very high priority in Android
             if (requestedConfig != null && requestedConfig.getMcc() != 0) {
                 if (candidate.type.config.getMcc() != current.type.config.getMcc()) {
                     return candidate.type.config.getMcc() != 0;
@@ -229,7 +225,6 @@ public abstract class ResourceValue {
                     return candidate.type.config.getMnc() != 0;
                 }
             } else {
-                // If no specific MCC/MNC requested, prefer ones that DON'T have them (default)
                 if (candidate.type.config.getMcc() != current.type.config.getMcc()) {
                     return candidate.type.config.getMcc() == 0;
                 }
@@ -238,12 +233,10 @@ public abstract class ResourceValue {
                 }
             }
 
-            // 2. SDK Version
             if (candidate.type.config.getSdkVersion() != current.type.config.getSdkVersion()) {
                 return candidate.type.config.getSdkVersion() > current.type.config.getSdkVersion();
             }
 
-            // 3. Density
             if (requestedConfig != null && requestedConfig.getDensity() > 0) {
                 int reqDensity = requestedConfig.getDensity();
                 int candDensity = candidate.type.density;
@@ -267,7 +260,6 @@ public abstract class ResourceValue {
                 }
             }
 
-            // If everything else is same, stick with first one (Base APK usually)
             return false;
         }
 
@@ -372,7 +364,6 @@ public abstract class ResourceValue {
 
         @Override
         public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
-            // The low-order 4 bits of the data value specify the type of the fraction
             final short type = (short) (this.value & 0xf);
             final String pstr;
             switch (type) {

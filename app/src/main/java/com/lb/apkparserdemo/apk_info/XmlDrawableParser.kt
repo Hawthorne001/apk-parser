@@ -8,7 +8,6 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.InsetDrawable
 import android.graphics.drawable.LayerDrawable
-import android.graphics.drawable.RotateDrawable
 import android.os.Build
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
@@ -92,15 +91,8 @@ object XmlDrawableParser {
 
         private fun Attributes.getRawValue(name: String): Int? {
             val attr = this.get(name) ?: this.get("android:$name")
-            if (attr?.typedValue != null) {
-                try {
-                    val field = ResourceValue::class.java.getDeclaredField("value")
-                    field.isAccessible = true
-                    return field.get(attr.typedValue) as? Int
-                } catch (e: Exception) {
-                }
-            }
-            return null
+            // Accessed via public field in modified ResourceValue class
+            return attr?.typedValue?.value
         }
 
         private fun Attributes.getFillType(name: String): PathFillType {
@@ -404,14 +396,14 @@ object XmlDrawableParser {
                 }
                 "rotate" -> {
                     val builder = drawableStack.pop() as RotateBuilder
-                    builder.drawable?.let {
-                        val rd = RotateDrawable()
-                        rd.drawable = it
-                        rd.fromDegrees = builder.fromDegrees
-                        rd.toDegrees = builder.toDegrees
-                        rd.level = 0
-                        handleFinishedDrawable(rd)
-                    }
+                    val rd = ManualRotateDrawable(builder.drawable)
+                    rd.fromDegrees = builder.fromDegrees
+                    rd.toDegrees = builder.toDegrees
+                    rd.pivotX = builder.pivotX
+                    rd.pivotY = builder.pivotY
+                    // Default to level 0 for static previews as requested by user.
+                    rd.level = 0
+                    handleFinishedDrawable(rd)
                 }
             }
         }
@@ -435,6 +427,7 @@ object XmlDrawableParser {
                     }
                     is InsetBuilder -> parent.drawable = drawable
                     is RotateBuilder -> parent.drawable = drawable
+                    is ManualRotateDrawable -> parent.updateInner(drawable)
                 }
             }
         }
@@ -522,6 +515,55 @@ object XmlDrawableParser {
             var toDegrees: Float = 360f
             var pivotX: String = "50%"
             var pivotY: String = "50%"
+        }
+
+        private class ManualRotateDrawable(var inner: Drawable?) : Drawable() {
+            var fromDegrees = 0f
+            var toDegrees = 360f
+            var pivotX = "50%"
+            var pivotY = "50%"
+
+            fun updateInner(d: Drawable) {
+                inner = d
+                inner?.bounds = bounds
+                invalidateSelf()
+            }
+
+            override fun draw(canvas: android.graphics.Canvas) {
+                val dr = inner ?: return
+                val b = bounds
+                val px = parsePivot(pivotX, b.width().toFloat()) + b.left
+                val py = parsePivot(pivotY, b.height().toFloat()) + b.top
+                
+                // Static previews use level 0, rotationAngle is simply fromDegrees.
+                val rotationAngle = fromDegrees + (toDegrees - fromDegrees) * (level / 10000.0f)
+
+                canvas.save()
+                canvas.rotate(rotationAngle, px, py)
+                dr.draw(canvas)
+                canvas.restore()
+            }
+
+            private fun parsePivot(p: String, size: Float): Float {
+                if (p.endsWith("%")) {
+                    val value = p.filter { it.isDigit() || it == '.' || it == 'E' || it == 'e' || it == '-' }.toFloatOrNull() ?: 0f
+                    return size * value / 100f
+                }
+                return p.toFloatOrNull() ?: 0f
+            }
+
+            override fun onBoundsChange(bounds: android.graphics.Rect) { inner?.bounds = bounds }
+            override fun setAlpha(alpha: Int) { inner?.alpha = alpha }
+            override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { inner?.colorFilter = colorFilter }
+            @Suppress("DEPRECATION")
+            override fun getOpacity(): Int = inner?.opacity ?: android.graphics.PixelFormat.TRANSLUCENT
+            override fun onLevelChange(level: Int): Boolean {
+                inner?.level = level
+                invalidateSelf()
+                return true
+            }
+            override fun getIntrinsicWidth(): Int = inner?.intrinsicWidth ?: -1
+            override fun getIntrinsicHeight(): Int = inner?.intrinsicHeight ?: -1
         }
 
         override fun onCData(xmlCData: net.dongliu.apk.parser.struct.xml.XmlCData) {}

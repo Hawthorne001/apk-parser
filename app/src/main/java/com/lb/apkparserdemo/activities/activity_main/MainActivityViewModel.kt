@@ -99,14 +99,20 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-////                    glitches in foreground:
-//                                                            it.add("com.google.android.deskclock")
-////                    wrong foreground/background color:
-//                                        it.add("com.google.android.captiveportallogin")
-//                                        it.add("com.android.bips")
-
-
-
+//                    it.add("com.google.android.deskclock")
+//                    it.add("com.google.android.apps.pixel.dcservice")
+//                    it.add("com.google.android.apps.tips")
+//                    it.add("com.google.android.apps.dreamliner")
+//                    it.add("com.google.android.captiveportallogin")
+//                    it.add("com.android.bips")
+//                    it.add("com.ebay.mobile")
+//                    it.add("com.kroegerama.appchecker")
+//                    it.add("com.authy.authy")
+//                    it.add("org.mozilla.firefox_beta")
+//                    it.add("com.google.android.apps.wallpaper")
+//                    it.add("com.google.pixel.livewallpaper")
+//                    it.add("com.tinder")
+//                    it.add("com.lb.vocalearn")
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
@@ -122,6 +128,10 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             val isSystemApp = packageInfo.isSystemApp()
 
             val baseApkPath = packageInfo.applicationInfo!!.publicSourceDir
+//            val appIconFromApkAlone=packageManager.getPackageArchiveInfo(baseApkPath,0)?.applicationInfo?.let {applicationInfo->
+//                val bitamp=packageManager.getApplicationIcon(applicationInfo).toBitmap()
+//                Log.d("AppLog", "got bitmap?${bitamp!=null}")
+//            }
             val splitApkPaths = packageInfo.applicationInfo!!.splitPublicSourceDirs?.toList()
                     ?: emptyList()
             val allApkFilePaths = listOf(baseApkPath) + splitApkPaths
