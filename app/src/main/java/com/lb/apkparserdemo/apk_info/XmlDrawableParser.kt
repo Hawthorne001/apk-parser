@@ -37,13 +37,13 @@ object XmlDrawableParser {
     class VectorBitmapDrawable(context: Context, bitmap: Bitmap) : BitmapDrawable(context.resources, bitmap)
 
     fun tryParseDrawable(
-        context: Context,
-        binXml: ByteArray,
-        apkInfo: ApkInfo,
-        deviceConfig: DeviceConfig?,
-        requestedAppIconSize: Int = 0,
-        isLayer: Boolean = false,
-        subResourceProvider: ((String) -> ByteArray?)? = null
+            context: Context,
+            binXml: ByteArray,
+            apkInfo: ApkInfo,
+            deviceConfig: DeviceConfig?,
+            requestedAppIconSize: Int = 0,
+            isLayer: Boolean = false,
+            subResourceProvider: ((String) -> ByteArray?)? = null
     ): Drawable? {
         if (binXml.size < 4) return null
         val buffer = ByteBuffer.wrap(binXml).order(ByteOrder.LITTLE_ENDIAN)
@@ -171,6 +171,7 @@ object XmlDrawableParser {
                     vectorBuilder = newBuilder
                     extraGroupsStack.add(0)
                 }
+
                 "group" -> {
                     vectorBuilder?.addGroup(
                             name = attr.getAttr("name") ?: "",
@@ -184,12 +185,14 @@ object XmlDrawableParser {
                     )
                     extraGroupsStack.add(0)
                 }
+
                 "path" -> {
                     val pathData = attr.getAttr("pathData") ?: return
                     val fillBrush = attr.getAttr("fillColor")?.let { obtainBrush(context, it, apkInfo, deviceConfig, subResourceProvider) }
                     val strokeBrush = attr.getAttr("strokeColor")?.let { obtainBrush(context, it, apkInfo, deviceConfig, subResourceProvider) }
 
-                    val finalFill = fillBrush ?: if (attr.getAttr("fillColor") != null) SolidColor(Color.Black) else null
+                    val finalFill = fillBrush
+                            ?: if (attr.getAttr("fillColor") != null) SolidColor(Color.Black) else null
 
                     vectorBuilder?.addPath(
                             pathData = addPathNodes(pathData),
@@ -205,6 +208,7 @@ object XmlDrawableParser {
                             pathFillType = attr.getFillType("fillType")
                     )
                 }
+
                 "clip-path" -> {
                     val pathData = attr.getAttr("pathData") ?: return
                     vectorBuilder?.addGroup(
@@ -215,9 +219,11 @@ object XmlDrawableParser {
                         extraGroupsStack[extraGroupsStack.size - 1]++
                     }
                 }
+
                 "adaptive-icon" -> {
                     drawableStack.push(AdaptiveIconBuilder())
                 }
+
                 "bitmap" -> {
                     val src = attr.getAttr("src")
                     if (src != null) {
@@ -225,13 +231,16 @@ object XmlDrawableParser {
                         if (drawable != null) handleFinishedDrawable(drawable)
                     }
                 }
+
                 "shape" -> {
                     drawableStack.push(ShapeBuilder())
                 }
+
                 "solid" -> {
                     val builder = drawableStack.peek() as? ShapeBuilder
                     builder?.color = attr.getAttr("color")?.let { resolveColor(context, it, apkInfo, deviceConfig, subResourceProvider) }
                 }
+
                 "gradient" -> {
                     val parent = if (drawableStack.isNotEmpty()) drawableStack.peek() else null
                     if (parent is ShapeBuilder || parent is GradientStreamer) {
@@ -240,15 +249,18 @@ object XmlDrawableParser {
                         drawableStack.push(gradientStreamer)
                     }
                 }
+
                 "background", "foreground", "monochrome" -> {
                     isInsideAdaptiveLayer = true
                     val builder = drawableStack.peek() as? AdaptiveIconBuilder
                     builder?.currentSection = name
                     attr.getAttr("drawable")?.let { builder?.setDrawable(it) }
                 }
+
                 "layer-list" -> {
                     drawableStack.push(mutableListOf<LayerItem>())
                 }
+
                 "item" -> {
                     val layerList = drawableStack.peek() as? MutableList<LayerItem>
                     val drawablePath = attr.getAttr("drawable")
@@ -264,6 +276,7 @@ object XmlDrawableParser {
                     item.bottom = attr.getAttr("bottom")?.parseInset(baseSize) ?: 0
                     layerList?.add(item)
                 }
+
                 "inset" -> {
                     val drawablePath = attr.getAttr("drawable")
                     val drawable = if (drawablePath != null) resolve(drawablePath, isLayer || isInsideAdaptiveLayer) else null
@@ -274,6 +287,7 @@ object XmlDrawableParser {
                     insetBuilder.insetBottom = attr.getAttr("insetBottom") ?: attr.getAttr("inset")
                     drawableStack.push(insetBuilder)
                 }
+
                 "rotate" -> {
                     val drawablePath = attr.getAttr("drawable")
                     val drawable = if (drawablePath != null) resolve(drawablePath, isLayer || isInsideAdaptiveLayer) else null
@@ -284,8 +298,10 @@ object XmlDrawableParser {
                     rotateBuilder.pivotY = attr.getAttr("pivotY") ?: "50%"
                     drawableStack.push(rotateBuilder)
                 }
+
                 "color" -> {
-                    val color = attr.getAttr("color")?.let { resolveColor(context, it, apkInfo, deviceConfig, subResourceProvider) } ?: Color.Transparent
+                    val color = attr.getAttr("color")?.let { resolveColor(context, it, apkInfo, deviceConfig, subResourceProvider) }
+                            ?: Color.Transparent
                     if (depth == 0) result = ColorDrawable(color.toArgb())
                     else handleFinishedDrawable(ColorDrawable(color.toArgb()))
                 }
@@ -319,17 +335,21 @@ object XmlDrawableParser {
                         handleFinishedDrawable(drawable)
                     }
                 }
+
                 "group" -> {
                     if (extraGroupsStack.isNotEmpty()) {
                         val extras = extraGroupsStack.removeAt(extraGroupsStack.size - 1)
                         repeat(extras + 1) { vectorBuilder?.clearGroup() }
                     }
                 }
+
                 "adaptive-icon" -> {
                     val builder = drawableStack.pop() as AdaptiveIconBuilder
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        val bg = builder.background ?: ColorDrawable(android.graphics.Color.TRANSPARENT)
-                        val fg = builder.foreground ?: ColorDrawable(android.graphics.Color.TRANSPARENT)
+                        val bg = builder.background
+                                ?: ColorDrawable(android.graphics.Color.TRANSPARENT)
+                        val fg = builder.foreground
+                                ?: ColorDrawable(android.graphics.Color.TRANSPARENT)
 
                         if (bg is ColorDrawable && fg is ColorDrawable && (bg as ColorDrawable).color == android.graphics.Color.TRANSPARENT && (fg as ColorDrawable).color == android.graphics.Color.TRANSPARENT) {
                             android.util.Log.w("AppLog", "Warning: Adaptive icon for ${apkInfo.apkMetaTranslator.apkMeta.packageName} has both background and foreground as transparent ColorDrawable. This is suspicious.")
@@ -339,6 +359,7 @@ object XmlDrawableParser {
                         handleFinishedDrawable(drawable)
                     }
                 }
+
                 "shape" -> {
                     val builder = drawableStack.pop() as ShapeBuilder
                     val baseSize = if (requestedAppIconSize > 0) (requestedAppIconSize * (108.0 / 72.0)).toInt() else 108
@@ -351,6 +372,7 @@ object XmlDrawableParser {
                     }
                     handleFinishedDrawable(drawable)
                 }
+
                 "gradient" -> {
                     val streamer = drawableStack.pop() as? GradientStreamer
                     streamer?.onEndTag(tag)
@@ -358,14 +380,17 @@ object XmlDrawableParser {
                     if (brush != null && drawableStack.isNotEmpty()) {
                         when (val parent = drawableStack.peek()) {
                             is ShapeBuilder -> parent.brush = brush
-                            is GradientStreamer -> { /* Nested gradients? */ }
+                            is GradientStreamer -> { /* Nested gradients? */
+                            }
                         }
                     }
                 }
+
                 "background", "foreground", "monochrome" -> {
                     isInsideAdaptiveLayer = false
                     (drawableStack.peek() as? AdaptiveIconBuilder)?.currentSection = null
                 }
+
                 "layer-list" -> {
                     @Suppress("UNCHECKED_CAST")
                     val items = drawableStack.pop() as MutableList<LayerItem>
@@ -385,6 +410,7 @@ object XmlDrawableParser {
                         handleFinishedDrawable(ld)
                     }
                 }
+
                 "inset" -> {
                     val builder = drawableStack.pop() as InsetBuilder
                     val baseSize = if (requestedAppIconSize > 0) (requestedAppIconSize * (108.0 / 72.0)).toInt() else 108
@@ -394,6 +420,7 @@ object XmlDrawableParser {
                     val b = builder.insetBottom?.parseInset(baseSize) ?: 0
                     builder.drawable?.let { handleFinishedDrawable(InsetDrawable(it, l, t, r, b)) }
                 }
+
                 "rotate" -> {
                     val builder = drawableStack.pop() as RotateBuilder
                     val rd = ManualRotateDrawable(builder.drawable)
@@ -420,11 +447,13 @@ object XmlDrawableParser {
                             "monochrome" -> parent.monochrome = drawable
                         }
                     }
+
                     is MutableList<*> -> {
                         @Suppress("UNCHECKED_CAST")
                         val list = parent as MutableList<LayerItem>
                         list.lastOrNull()?.drawable = drawable
                     }
+
                     is InsetBuilder -> parent.drawable = drawable
                     is RotateBuilder -> parent.drawable = drawable
                     is ManualRotateDrawable -> parent.updateInner(drawable)
@@ -433,16 +462,25 @@ object XmlDrawableParser {
         }
 
         private fun resolve(path: String, forceIsLayer: Boolean = false): Drawable? {
-            if (path.startsWith("#")) return ColorDrawable(android.graphics.Color.parseColor(path))
-                if (path.startsWith("resourceId:")) {
-                val resId = try { path.substringAfter("0x").toLong(16).toInt() } catch (e: Exception) { 0 }
+            if (path.startsWith("#"))
+                return ColorDrawable(android.graphics.Color.parseColor(path))
+            if (path.startsWith("resourceId:")) {
+                val resId = try {
+                    path.substringAfter("0x").toLong(16).toInt()
+                } catch (e: Exception) {
+                    0
+                }
                 if ((resId shr 24) == 0x01) {
                     // For system resources, use Resources.getSystem() to avoid the current app's theme/Material You pollution
                     return try {
                         val sysRes = android.content.res.Resources.getSystem()
                         androidx.core.content.res.ResourcesCompat.getDrawable(sysRes, resId, null)
                     } catch (e: Exception) {
-                        try { androidx.core.content.res.ResourcesCompat.getDrawable(context.resources, resId, null) } catch (_: Exception) { null }
+                        try {
+                            androidx.core.content.res.ResourcesCompat.getDrawable(context.resources, resId, null)
+                        } catch (_: Exception) {
+                            null
+                        }
                     }
                 }
                 val ref = ResourceValue.reference(resId)
@@ -540,7 +578,7 @@ object XmlDrawableParser {
                 val b = bounds
                 val px = parsePivot(pivotX, b.width().toFloat()) + b.left
                 val py = parsePivot(pivotY, b.height().toFloat()) + b.top
-                
+
                 // Static previews use level 0, rotationAngle is simply fromDegrees.
                 val rotationAngle = fromDegrees + (toDegrees - fromDegrees) * (level / 10000.0f)
 
@@ -552,22 +590,35 @@ object XmlDrawableParser {
 
             private fun parsePivot(p: String, size: Float): Float {
                 if (p.endsWith("%")) {
-                    val value = p.filter { it.isDigit() || it == '.' || it == 'E' || it == 'e' || it == '-' }.toFloatOrNull() ?: 0f
+                    val value = p.filter { it.isDigit() || it == '.' || it == 'E' || it == 'e' || it == '-' }.toFloatOrNull()
+                            ?: 0f
                     return size * value / 100f
                 }
                 return p.toFloatOrNull() ?: 0f
             }
 
-            override fun onBoundsChange(bounds: android.graphics.Rect) { inner?.bounds = bounds }
-            override fun setAlpha(alpha: Int) { inner?.alpha = alpha }
-            override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { inner?.colorFilter = colorFilter }
+            override fun onBoundsChange(bounds: android.graphics.Rect) {
+                inner?.bounds = bounds
+            }
+
+            override fun setAlpha(alpha: Int) {
+                inner?.alpha = alpha
+            }
+
+            override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {
+                inner?.colorFilter = colorFilter
+            }
+
             @Suppress("DEPRECATION")
-            override fun getOpacity(): Int = inner?.opacity ?: android.graphics.PixelFormat.TRANSLUCENT
+            override fun getOpacity(): Int = inner?.opacity
+                    ?: android.graphics.PixelFormat.TRANSLUCENT
+
             override fun onLevelChange(level: Int): Boolean {
                 inner?.level = level
                 invalidateSelf()
                 return true
             }
+
             override fun getIntrinsicWidth(): Int = inner?.intrinsicWidth ?: -1
             override fun getIntrinsicHeight(): Int = inner?.intrinsicHeight ?: -1
         }
@@ -625,38 +676,106 @@ object XmlDrawableParser {
                     addPathNodesToPath(node.pathData, this)
                     fillType = node.pathFillType
                 }
-                drawPath(path, node.fill ?: SolidColor(Color.Transparent), node.fillAlpha, Fill, colorFilter)
+                drawPath(path, node.fill
+                        ?: SolidColor(Color.Transparent), node.fillAlpha, Fill, colorFilter)
                 node.stroke?.let { drawPath(path, it, node.strokeAlpha, Stroke(width = node.strokeLineWidth, miter = node.strokeLineMiter, cap = node.strokeLineCap, join = node.strokeLineJoin), colorFilter) }
             }
+
             is VectorGroup -> renderVectorGroup(node, colorFilter)
         }
     }
 
     private fun addPathNodesToPath(nodes: List<PathNode>, path: Path) {
-        var currentX = 0f; var currentY = 0f; var segmentX = 0f; var segmentY = 0f
-        var lastControlX = Float.NaN; var lastControlY = Float.NaN
+        var currentX = 0f;
+        var currentY = 0f;
+        var segmentX = 0f;
+        var segmentY = 0f
+        var lastControlX = Float.NaN;
+        var lastControlY = Float.NaN
         for (node in nodes) {
-            var nextControlX = Float.NaN; var nextControlY = Float.NaN
+            var nextControlX = Float.NaN;
+            var nextControlY = Float.NaN
             when (node) {
-                is PathNode.Close -> { currentX = segmentX; currentY = segmentY; path.close() }
-                is PathNode.MoveTo -> { currentX = node.x; currentY = node.y; segmentX = node.x; segmentY = node.y; path.moveTo(node.x, node.y) }
-                is PathNode.RelativeMoveTo -> { currentX += node.dx; currentY += node.dy; segmentX = currentX; segmentY = currentY; path.relativeMoveTo(node.dx, node.dy) }
-                is PathNode.LineTo -> { currentX = node.x; currentY = node.y; path.lineTo(node.x, node.y) }
-                is PathNode.RelativeLineTo -> { currentX += node.dx; currentY += node.dy; path.relativeLineTo(node.dx, node.dy) }
-                is PathNode.HorizontalTo -> { currentX = node.x; path.lineTo(node.x, currentY) }
-                is PathNode.RelativeHorizontalTo -> { currentX += node.dx; path.relativeLineTo(node.dx, 0f) }
-                is PathNode.VerticalTo -> { currentY = node.y; path.lineTo(currentX, node.y) }
-                is PathNode.RelativeVerticalTo -> { currentY += node.dy; path.relativeLineTo(0f, node.dy) }
-                is PathNode.CurveTo -> { path.cubicTo(node.x1, node.y1, node.x2, node.y2, node.x3, node.y3); nextControlX = node.x2; nextControlY = node.y2; currentX = node.x3; currentY = node.y3 }
-                is PathNode.RelativeCurveTo -> { path.relativeCubicTo(node.dx1, node.dy1, node.dx2, node.dy2, node.dx3, node.dy3); nextControlX = currentX + node.dx2; nextControlY = currentY + node.dy2; currentX += node.dx3; currentY += node.dy3 }
-                is PathNode.QuadTo -> { path.quadraticTo(node.x1, node.y1, node.x2, node.y2); nextControlX = node.x1; nextControlY = node.y1; currentX = node.x2; currentY = node.y2 }
-                is PathNode.RelativeQuadTo -> { path.relativeQuadraticTo(node.dx1, node.dy1, node.dx2, node.dy2); nextControlX = currentX + node.dx1; nextControlY = currentY + node.dy1; currentX += node.dx2; currentY += node.dy2 }
-                is PathNode.ArcTo -> { drawArc(path, currentX.toDouble(), currentY.toDouble(), node.arcStartX.toDouble(), node.arcStartY.toDouble(), node.horizontalEllipseRadius.toDouble(), node.verticalEllipseRadius.toDouble(), node.theta.toDouble(), node.isMoreThanHalf, node.isPositiveArc); currentX = node.arcStartX; currentY = node.arcStartY }
-                is PathNode.RelativeArcTo -> { val nextX = currentX + node.arcStartDx; val nextY = currentY + node.arcStartDy; drawArc(path, currentX.toDouble(), currentY.toDouble(), nextX.toDouble(), nextY.toDouble(), node.horizontalEllipseRadius.toDouble(), node.verticalEllipseRadius.toDouble(), node.theta.toDouble(), node.isMoreThanHalf, node.isPositiveArc); currentX = nextX; currentY = nextY }
-                is PathNode.ReflectiveCurveTo -> { val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX; val cy = if (lastControlY.isNaN()) currentY else 2 * currentY - lastControlY; path.cubicTo(cx, cy, node.x1, node.y1, node.x2, node.y2); nextControlX = node.x1; nextControlY = node.y1; currentX = node.x2; currentY = node.y2 }
-                is PathNode.RelativeReflectiveCurveTo -> { val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX; val cy = if (lastControlY.isNaN()) currentY else 2 * currentY - lastControlY; path.cubicTo(cx, cy, currentX + node.dx1, currentY + node.dy1, currentX + node.dx2, currentY + node.dy2); nextControlX = currentX + node.dx1; nextControlY = currentY + node.dy1; currentX += node.dx2; currentY += node.dy2 }
-                is PathNode.ReflectiveQuadTo -> { val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX; val cy = if (lastControlY.isNaN()) currentY else 2 * currentY - lastControlY; path.quadraticTo(cx, cy, node.x, node.y); nextControlX = cx; nextControlY = cy; currentX = node.x; currentY = node.y }
-                is PathNode.RelativeReflectiveQuadTo -> { val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX; val cy = if (lastControlY.isNaN()) currentY else 2 * currentY - lastControlY; path.quadraticTo(cx, cy, currentX + node.dx, currentY + node.dy); nextControlX = cx; nextControlY = cy; currentX += node.dx; currentY += node.dy }
+                is PathNode.Close -> {
+                    currentX = segmentX; currentY = segmentY; path.close()
+                }
+
+                is PathNode.MoveTo -> {
+                    currentX = node.x; currentY = node.y; segmentX = node.x; segmentY = node.y; path.moveTo(node.x, node.y)
+                }
+
+                is PathNode.RelativeMoveTo -> {
+                    currentX += node.dx; currentY += node.dy; segmentX = currentX; segmentY = currentY; path.relativeMoveTo(node.dx, node.dy)
+                }
+
+                is PathNode.LineTo -> {
+                    currentX = node.x; currentY = node.y; path.lineTo(node.x, node.y)
+                }
+
+                is PathNode.RelativeLineTo -> {
+                    currentX += node.dx; currentY += node.dy; path.relativeLineTo(node.dx, node.dy)
+                }
+
+                is PathNode.HorizontalTo -> {
+                    currentX = node.x; path.lineTo(node.x, currentY)
+                }
+
+                is PathNode.RelativeHorizontalTo -> {
+                    currentX += node.dx; path.relativeLineTo(node.dx, 0f)
+                }
+
+                is PathNode.VerticalTo -> {
+                    currentY = node.y; path.lineTo(currentX, node.y)
+                }
+
+                is PathNode.RelativeVerticalTo -> {
+                    currentY += node.dy; path.relativeLineTo(0f, node.dy)
+                }
+
+                is PathNode.CurveTo -> {
+                    path.cubicTo(node.x1, node.y1, node.x2, node.y2, node.x3, node.y3); nextControlX = node.x2; nextControlY = node.y2; currentX = node.x3; currentY = node.y3
+                }
+
+                is PathNode.RelativeCurveTo -> {
+                    path.relativeCubicTo(node.dx1, node.dy1, node.dx2, node.dy2, node.dx3, node.dy3); nextControlX = currentX + node.dx2; nextControlY = currentY + node.dy2; currentX += node.dx3; currentY += node.dy3
+                }
+
+                is PathNode.QuadTo -> {
+                    path.quadraticTo(node.x1, node.y1, node.x2, node.y2); nextControlX = node.x1; nextControlY = node.y1; currentX = node.x2; currentY = node.y2
+                }
+
+                is PathNode.RelativeQuadTo -> {
+                    path.relativeQuadraticTo(node.dx1, node.dy1, node.dx2, node.dy2); nextControlX = currentX + node.dx1; nextControlY = currentY + node.dy1; currentX += node.dx2; currentY += node.dy2
+                }
+
+                is PathNode.ArcTo -> {
+                    drawArc(path, currentX.toDouble(), currentY.toDouble(), node.arcStartX.toDouble(), node.arcStartY.toDouble(), node.horizontalEllipseRadius.toDouble(), node.verticalEllipseRadius.toDouble(), node.theta.toDouble(), node.isMoreThanHalf, node.isPositiveArc); currentX = node.arcStartX; currentY = node.arcStartY
+                }
+
+                is PathNode.RelativeArcTo -> {
+                    val nextX = currentX + node.arcStartDx;
+                    val nextY = currentY + node.arcStartDy; drawArc(path, currentX.toDouble(), currentY.toDouble(), nextX.toDouble(), nextY.toDouble(), node.horizontalEllipseRadius.toDouble(), node.verticalEllipseRadius.toDouble(), node.theta.toDouble(), node.isMoreThanHalf, node.isPositiveArc); currentX = nextX; currentY = nextY
+                }
+
+                is PathNode.ReflectiveCurveTo -> {
+                    val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX;
+                    val cy = if (lastControlY.isNaN()) currentY else 2 * currentY - lastControlY; path.cubicTo(cx, cy, node.x1, node.y1, node.x2, node.y2); nextControlX = node.x1; nextControlY = node.y1; currentX = node.x2; currentY = node.y2
+                }
+
+                is PathNode.RelativeReflectiveCurveTo -> {
+                    val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX;
+                    val cy = if (lastControlY.isNaN()) currentY else 2 * currentY - lastControlY; path.cubicTo(cx, cy, currentX + node.dx1, currentY + node.dy1, currentX + node.dx2, currentY + node.dy2); nextControlX = currentX + node.dx1; nextControlY = currentY + node.dy1; currentX += node.dx2; currentY += node.dy2
+                }
+
+                is PathNode.ReflectiveQuadTo -> {
+                    val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX;
+                    val cy = if (lastControlY.isNaN()) currentY else 2 * currentY - lastControlY; path.quadraticTo(cx, cy, node.x, node.y); nextControlX = cx; nextControlY = cy; currentX = node.x; currentY = node.y
+                }
+
+                is PathNode.RelativeReflectiveQuadTo -> {
+                    val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX;
+                    val cy = if (lastControlY.isNaN()) currentY else 2 * currentY - lastControlY; path.quadraticTo(cx, cy, currentX + node.dx, currentY + node.dy); nextControlX = cx; nextControlY = cy; currentX += node.dx; currentY += node.dy
+                }
             }
             lastControlX = nextControlX; lastControlY = nextControlY
         }
@@ -664,35 +783,56 @@ object XmlDrawableParser {
 
     private fun drawArc(path: Path, x0: Double, y0: Double, x1: Double, y1: Double, a: Double, b: Double, theta: Double, isLargeArc: Boolean, isSweep: Boolean) {
         if (x0 == x1 && y0 == y1) return
-        var rx = abs(a); var ry = abs(b)
-        if (rx == 0.0 || ry == 0.0) { path.lineTo(x1.toFloat(), y1.toFloat()); return }
-        val thetaRad = Math.toRadians(theta); val cosTheta = cos(thetaRad); val sinTheta = sin(thetaRad)
-        val dx2 = (x0 - x1) / 2.0; val dy2 = (y0 - y1) / 2.0
-        val x1p = cosTheta * dx2 + sinTheta * dy2; val y1p = -sinTheta * dx2 + cosTheta * dy2
+        var rx = abs(a);
+        var ry = abs(b)
+        if (rx == 0.0 || ry == 0.0) {
+            path.lineTo(x1.toFloat(), y1.toFloat()); return
+        }
+        val thetaRad = Math.toRadians(theta);
+        val cosTheta = cos(thetaRad);
+        val sinTheta = sin(thetaRad)
+        val dx2 = (x0 - x1) / 2.0;
+        val dy2 = (y0 - y1) / 2.0
+        val x1p = cosTheta * dx2 + sinTheta * dy2;
+        val y1p = -sinTheta * dx2 + cosTheta * dy2
         val lambda = (x1p * x1p) / (rx * rx) + (y1p * y1p) / (ry * ry)
-        if (lambda > 1.0) { rx *= sqrt(lambda); ry *= sqrt(lambda) }
-        val rxSq = rx * rx; val rySq = ry * ry; val x1pSq = x1p * x1p; val y1pSq = y1p * y1p
+        if (lambda > 1.0) {
+            rx *= sqrt(lambda); ry *= sqrt(lambda)
+        }
+        val rxSq = rx * rx;
+        val rySq = ry * ry;
+        val x1pSq = x1p * x1p;
+        val y1pSq = y1p * y1p
         var radicand = (rxSq * rySq - rxSq * y1pSq - rySq * x1pSq) / (rxSq * y1pSq + rySq * x1pSq)
         radicand = max(0.0, radicand)
         val coef = (if (isLargeArc == isSweep) -1.0 else 1.0) * sqrt(radicand)
-        val cxp = coef * ((rx * y1p) / ry); val cyp = coef * (-(ry * x1p) / rx)
-        val cx = cosTheta * cxp - sinTheta * cyp + (x0 + x1) / 2.0; val cy = sinTheta * cxp + cosTheta * cyp + (y0 + y1) / 2.0
+        val cxp = coef * ((rx * y1p) / ry);
+        val cyp = coef * (-(ry * x1p) / rx)
+        val cx = cosTheta * cxp - sinTheta * cyp + (x0 + x1) / 2.0;
+        val cy = sinTheta * cxp + cosTheta * cyp + (y0 + y1) / 2.0
         fun angle(ux: Double, uy: Double, vx: Double, vy: Double): Double {
-            val dot = ux * vx + uy * vy; val len = sqrt(ux * ux + uy * uy) * sqrt(vx * vx + vy * vy)
+            val dot = ux * vx + uy * vy;
+            val len = sqrt(ux * ux + uy * uy) * sqrt(vx * vx + vy * vy)
             if (len == 0.0) return 0.0
             var ang = acos(max(-1.0, min(1.0, dot / len)))
             if (ux * vy - uy * vx < 0.0) ang = -ang
             return ang
         }
+
         val startAngle = angle(1.0, 0.0, (x1p - cxp) / rx, (y1p - cyp) / ry)
         var deltaAngle = angle((x1p - cxp) / rx, (y1p - cyp) / ry, (-x1p - cxp) / rx, (-y1p - cyp) / ry)
         if (!isSweep && deltaAngle > 0) deltaAngle -= 2 * PI else if (isSweep && deltaAngle < 0) deltaAngle += 2 * PI
         val numSegments = ceil(abs(deltaAngle) / (PI / 2.0)).toInt()
         var angle = startAngle
         for (i in 0 until numSegments) {
-            val segmentDelta = deltaAngle / numSegments; val bx = rx * cos(angle + segmentDelta); val by = ry * sin(angle + segmentDelta)
-            val t = 4.0 / 3.0 * tan(segmentDelta / 4.0); val x2 = rx * cos(angle) - t * ry * sin(angle); val y2 = ry * sin(angle) + t * rx * cos(angle)
-            val x3 = bx + t * rx * sin(angle + segmentDelta); val y3 = by - t * rx * cos(angle + segmentDelta)
+            val segmentDelta = deltaAngle / numSegments;
+            val bx = rx * cos(angle + segmentDelta);
+            val by = ry * sin(angle + segmentDelta)
+            val t = 4.0 / 3.0 * tan(segmentDelta / 4.0);
+            val x2 = rx * cos(angle) - t * ry * sin(angle);
+            val y2 = ry * sin(angle) + t * rx * cos(angle)
+            val x3 = bx + t * rx * sin(angle + segmentDelta);
+            val y3 = by - t * rx * cos(angle + segmentDelta)
             val ex = if (i == numSegments - 1) x1.toFloat() else (cosTheta * bx - sinTheta * by + cx).toFloat()
             val ey = if (i == numSegments - 1) y1.toFloat() else (sinTheta * bx + cosTheta * by + cy).toFloat()
             path.cubicTo((cosTheta * x2 - sinTheta * y2 + cx).toFloat(), (sinTheta * x2 + cosTheta * y2 + cy).toFloat(), (cosTheta * x3 - sinTheta * y3 + cx).toFloat(), (sinTheta * x3 + cosTheta * y3 + cy).toFloat(), ex, ey)
@@ -701,7 +841,8 @@ object XmlDrawableParser {
     }
 
     private fun addPathNodes(pathData: String): List<PathNode> = androidx.compose.ui.graphics.vector.addPathNodes(pathData)
-    private fun String.parseDimension(): Float = filter { it.isDigit() || it == '.' || it == '-' || it == 'e' || it == 'E' }.toFloatOrNull() ?: 0f
+    private fun String.parseDimension(): Float = filter { it.isDigit() || it == '.' || it == '-' || it == 'e' || it == 'E' }.toFloatOrNull()
+            ?: 0f
 
     private fun obtainBrush(context: Context, colorStr: String, apkInfo: ApkInfo, deviceConfig: DeviceConfig?, subResourceProvider: ((String) -> ByteArray?)?): Brush? {
         if (colorStr.startsWith("#")) {
@@ -710,17 +851,29 @@ object XmlDrawableParser {
                 5 -> "#" + colorStr[1] + colorStr[1] + colorStr[2] + colorStr[2] + colorStr[3] + colorStr[3] + colorStr[4] + colorStr[4]
                 else -> colorStr
             }
-            return try { SolidColor(Color(android.graphics.Color.parseColor(c))) } catch (e: Exception) { null }
+            return try {
+                SolidColor(Color(android.graphics.Color.parseColor(c)))
+            } catch (e: Exception) {
+                null
+            }
         }
         if (colorStr.startsWith("resourceId:")) {
-            val resId = try { colorStr.substringAfter("0x").toLong(16).toInt() } catch (e: Exception) { 0 }
+            val resId = try {
+                colorStr.substringAfter("0x").toLong(16).toInt()
+            } catch (e: Exception) {
+                0
+            }
             if ((resId shr 24) == 0x01) {
                 // For system colors, use Resources.getSystem() to avoid the current app's theme/Material You pollution
                 return try {
                     val sysRes = android.content.res.Resources.getSystem()
                     SolidColor(Color(sysRes.getColor(resId, null)))
                 } catch (_: Exception) {
-                    try { SolidColor(Color(androidx.core.content.res.ResourcesCompat.getColor(context.resources, resId, null))) } catch (_: Exception) { null }
+                    try {
+                        SolidColor(Color(androidx.core.content.res.ResourcesCompat.getColor(context.resources, resId, null)))
+                    } catch (_: Exception) {
+                        null
+                    }
                 }
             }
             val value = ResourceValue.reference(resId).toStringValue(apkInfo.resourceTable, deviceConfig)
@@ -743,11 +896,13 @@ object XmlDrawableParser {
     }
 
     private fun parseColorStateList(context: Context, bytes: ByteArray, apkInfo: ApkInfo, deviceConfig: DeviceConfig?, subResourceProvider: ((String) -> ByteArray?)?): Color {
-        var res = Color.Transparent; var def = Color.Transparent
+        var res = Color.Transparent;
+        var def = Color.Transparent
         val streamer = object : XmlStreamer {
             override fun onStartTag(tag: XmlNodeStartTag) {
                 if (tag.name == "item") {
-                    val colorAttr = tag.attributes.get("color") ?: tag.attributes.get("android:color")
+                    val colorAttr = tag.attributes.get("color")
+                            ?: tag.attributes.get("android:color")
                     colorAttr?.toStringValue(apkInfo.resourceTable, deviceConfig)?.let {
                         val c = resolveColor(context, it, apkInfo, deviceConfig, subResourceProvider)
                         if (res == Color.Transparent) res = c
@@ -755,64 +910,101 @@ object XmlDrawableParser {
                     }
                 }
             }
+
             override fun onEndTag(tag: XmlNodeEndTag) {}
             override fun onCData(xmlCData: net.dongliu.apk.parser.struct.xml.XmlCData) {}
             override fun onNamespaceStart(tag: net.dongliu.apk.parser.struct.xml.XmlNamespaceStartTag) {}
             override fun onNamespaceEnd(tag: net.dongliu.apk.parser.struct.xml.XmlNamespaceEndTag) {}
         }
-        try { BinaryXmlParser(ByteBuffer.wrap(bytes), apkInfo.resourceTable, streamer, deviceConfig).parse() } catch (e: Exception) {}
+        try {
+            BinaryXmlParser(ByteBuffer.wrap(bytes), apkInfo.resourceTable, streamer, deviceConfig).parse()
+        } catch (e: Exception) {
+        }
         return if (def != Color.Transparent) def else res
     }
 
     private fun tryParseComplexColor(context: Context, bytes: ByteArray, apkInfo: ApkInfo, deviceConfig: DeviceConfig?, subResourceProvider: ((String) -> ByteArray?)?): Brush? {
         val streamer = GradientStreamer(context, apkInfo, deviceConfig, subResourceProvider)
-        try { BinaryXmlParser(ByteBuffer.wrap(bytes), apkInfo.resourceTable, streamer, deviceConfig).parse(); return streamer.brush } catch (e: Exception) {}
+        try {
+            BinaryXmlParser(ByteBuffer.wrap(bytes), apkInfo.resourceTable, streamer, deviceConfig).parse(); return streamer.brush
+        } catch (e: Exception) {
+        }
         return null
     }
 
     private class GradientStreamer(private val context: Context, private val apkInfo: ApkInfo, private val deviceConfig: DeviceConfig?, private val subResourceProvider: ((String) -> ByteArray?)?) : XmlStreamer {
-        var brush: Brush? = null; private var type: String? = null; private var startColor = Color.Transparent; private var endColor = Color.Transparent; private var centerColor: Color? = null
-        private var sx = 0f; private var sy = 0f; private var ex = 0f; private var ey = 0f; private var cx = 0f; private var cy = 0f; private var gr = 0f; private var angle = 0f
-        private val stops = mutableListOf<Float>(); private val colors = mutableListOf<Color>()
-        private fun Attributes.getAttr(name: String) = (this.get(name) ?: this.get("android:$name"))?.toStringValue(apkInfo.resourceTable, deviceConfig) ?: (this.get(name) ?: this.get("android:$name"))?.value
+        var brush: Brush? = null;
+        private var type: String? = null;
+        private var startColor = Color.Transparent;
+        private var endColor = Color.Transparent;
+        private var centerColor: Color? = null
+        private var sx = 0f;
+        private var sy = 0f;
+        private var ex = 0f;
+        private var ey = 0f;
+        private var cx = 0f;
+        private var cy = 0f;
+        private var gr = 0f;
+        private var angle = 0f
+        private val stops = mutableListOf<Float>();
+        private val colors = mutableListOf<Color>()
+        private fun Attributes.getAttr(name: String) = (this.get(name)
+                ?: this.get("android:$name"))?.toStringValue(apkInfo.resourceTable, deviceConfig)
+                ?: (this.get(name) ?: this.get("android:$name"))?.value
+
         override fun onStartTag(tag: XmlNodeStartTag) {
             val a = tag.attributes
             when (tag.name) {
                 "gradient" -> {
-                    type = when (a.getAttr("type")) { "1", "radial" -> "radial"; "2", "sweep" -> "sweep"; else -> "linear" }
-                    startColor = a.getAttr("startColor")?.let { resolveColor(context, it, apkInfo, deviceConfig, subResourceProvider) } ?: Color.Transparent
-                    endColor = a.getAttr("endColor")?.let { resolveColor(context, it, apkInfo, deviceConfig, subResourceProvider) } ?: Color.Transparent
+                    type = when (a.getAttr("type")) {
+                        "1", "radial" -> "radial"; "2", "sweep" -> "sweep"; else -> "linear"
+                    }
+                    startColor = a.getAttr("startColor")?.let { resolveColor(context, it, apkInfo, deviceConfig, subResourceProvider) }
+                            ?: Color.Transparent
+                    endColor = a.getAttr("endColor")?.let { resolveColor(context, it, apkInfo, deviceConfig, subResourceProvider) }
+                            ?: Color.Transparent
                     centerColor = a.getAttr("centerColor")?.let { resolveColor(context, it, apkInfo, deviceConfig, subResourceProvider) }
-                    sx = a.getAttr("startX")?.toFloat() ?: 0f; sy = a.getAttr("startY")?.toFloat() ?: 0f
+                    sx = a.getAttr("startX")?.toFloat() ?: 0f; sy = a.getAttr("startY")?.toFloat()
+                            ?: 0f
                     ex = a.getAttr("endX")?.toFloat() ?: 0f; ey = a.getAttr("endY")?.toFloat() ?: 0f
-                    cx = a.getAttr("centerX")?.toFloat() ?: 0f; cy = a.getAttr("centerY")?.toFloat() ?: 0f
-                    gr = a.getAttr("gradientRadius")?.toFloat() ?: 0f; angle = a.getAttr("angle")?.toFloat() ?: 0f
+                    cx = a.getAttr("centerX")?.toFloat() ?: 0f; cy = a.getAttr("centerY")?.toFloat()
+                            ?: 0f
+                    gr = a.getAttr("gradientRadius")?.toFloat()
+                            ?: 0f; angle = a.getAttr("angle")?.toFloat() ?: 0f
                 }
+
                 "item" -> {
                     stops.add(a.getAttr("offset")?.toFloat() ?: 0f)
-                    colors.add(a.getAttr("color")?.let { resolveColor(context, it, apkInfo, deviceConfig, subResourceProvider) } ?: Color.Transparent)
+                    colors.add(a.getAttr("color")?.let { resolveColor(context, it, apkInfo, deviceConfig, subResourceProvider) }
+                            ?: Color.Transparent)
                 }
-                "color" -> brush = SolidColor(a.getAttr("color")?.let { resolveColor(context, it, apkInfo, deviceConfig, subResourceProvider) } ?: Color.Transparent)
+
+                "color" -> brush = SolidColor(a.getAttr("color")?.let { resolveColor(context, it, apkInfo, deviceConfig, subResourceProvider) }
+                        ?: Color.Transparent)
             }
         }
+
         override fun onEndTag(tag: XmlNodeEndTag) {
             if (tag.name == "gradient") {
-                val fcolors = if (colors.isNotEmpty()) colors else (centerColor?.let { listOf(startColor, it, endColor) } ?: listOf(startColor, endColor))
+                val fcolors = if (colors.isNotEmpty()) colors else (centerColor?.let { listOf(startColor, it, endColor) }
+                        ?: listOf(startColor, endColor))
                 val fstops = if (stops.isNotEmpty()) stops else (if (centerColor != null) listOf(0f, 0.5f, 1f) else listOf(0f, 1f))
                 val stopsArray = fstops.zip(fcolors).toTypedArray()
                 brush = when (type) {
                     "radial" -> Brush.radialGradient(colorStops = stopsArray, center = androidx.compose.ui.geometry.Offset(cx, cy), radius = gr)
                     "sweep" -> Brush.sweepGradient(colorStops = stopsArray, center = androidx.compose.ui.geometry.Offset(cx, cy))
                     else -> if (sx == 0f && sy == 0f && ex == 0f && ey == 0f && angle != 0f) RelativeLinearGradient(fstops.zip(fcolors), calculateGradientCoords(angle))
-                            else Brush.linearGradient(colorStops = stopsArray, start = androidx.compose.ui.geometry.Offset(sx, sy), end = androidx.compose.ui.geometry.Offset(ex, ey))
+                    else Brush.linearGradient(colorStops = stopsArray, start = androidx.compose.ui.geometry.Offset(sx, sy), end = androidx.compose.ui.geometry.Offset(ex, ey))
                 }
             }
         }
+
         private fun calculateGradientCoords(a: Float) = when ((((a % 360) + 360) % 360).toInt()) {
             0 -> floatArrayOf(0f, 0.5f, 1f, 0.5f); 45 -> floatArrayOf(0f, 1f, 1f, 0f); 90 -> floatArrayOf(0.5f, 1f, 0.5f, 0f); 135 -> floatArrayOf(1f, 1f, 0f, 0f)
             180 -> floatArrayOf(1f, 0.5f, 0f, 0.5f); 225 -> floatArrayOf(1f, 0f, 0f, 1f); 270 -> floatArrayOf(0.5f, 0f, 0.5f, 1f); 315 -> floatArrayOf(0f, 0f, 1f, 1f)
             else -> floatArrayOf(0f, 0.5f, 1f, 0.5f)
         }
+
         override fun onCData(xmlCData: net.dongliu.apk.parser.struct.xml.XmlCData) {}
         override fun onNamespaceStart(tag: net.dongliu.apk.parser.struct.xml.XmlNamespaceStartTag) {}
         override fun onNamespaceEnd(tag: net.dongliu.apk.parser.struct.xml.XmlNamespaceEndTag) {}
@@ -823,12 +1015,21 @@ object XmlDrawableParser {
     }
 
     private fun imageBrushDrawable(context: Context, brush: Brush, size: Int): Drawable {
-        val b = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888); val canvas = Canvas(android.graphics.Canvas(b))
+        val b = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        val canvas = Canvas(android.graphics.Canvas(b))
         CanvasDrawScope().draw(Density(context.resources.displayMetrics.density), LayoutDirection.Ltr, canvas, androidx.compose.ui.geometry.Size(size.toFloat(), size.toFloat())) { drawRect(brush) }
         return VectorBitmapDrawable(context, b)
     }
 
-    private fun parseBlendMode(s: String?): BlendMode = when (s) { "src_over", "3" -> BlendMode.SrcOver; "src_in", "5" -> BlendMode.SrcIn; "src_atop", "9" -> BlendMode.SrcAtop; "multiply", "14" -> BlendMode.Modulate; "screen", "15" -> BlendMode.Screen; "add", "16" -> BlendMode.Plus; else -> BlendMode.SrcIn }
-    private fun parseStrokeCap(s: String?): StrokeCap = when (s) { "butt", "0" -> StrokeCap.Butt; "round", "1" -> StrokeCap.Round; "square", "2" -> StrokeCap.Square; else -> StrokeCap.Butt }
-    private fun parseStrokeJoin(s: String?): StrokeJoin = when (s) { "miter", "0" -> StrokeJoin.Miter; "round", "1" -> StrokeJoin.Round; "bevel", "2" -> StrokeJoin.Bevel; else -> StrokeJoin.Miter }
+    private fun parseBlendMode(s: String?): BlendMode = when (s) {
+        "src_over", "3" -> BlendMode.SrcOver; "src_in", "5" -> BlendMode.SrcIn; "src_atop", "9" -> BlendMode.SrcAtop; "multiply", "14" -> BlendMode.Modulate; "screen", "15" -> BlendMode.Screen; "add", "16" -> BlendMode.Plus; else -> BlendMode.SrcIn
+    }
+
+    private fun parseStrokeCap(s: String?): StrokeCap = when (s) {
+        "butt", "0" -> StrokeCap.Butt; "round", "1" -> StrokeCap.Round; "square", "2" -> StrokeCap.Square; else -> StrokeCap.Butt
+    }
+
+    private fun parseStrokeJoin(s: String?): StrokeJoin = when (s) {
+        "miter", "0" -> StrokeJoin.Miter; "round", "1" -> StrokeJoin.Round; "bevel", "2" -> StrokeJoin.Bevel; else -> StrokeJoin.Miter
+    }
 }
