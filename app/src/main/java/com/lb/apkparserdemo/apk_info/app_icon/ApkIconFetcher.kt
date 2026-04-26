@@ -41,10 +41,21 @@ object ApkIconFetcher {
         }
 
         val densityDpi = context.resources.displayMetrics.densityDpi
-        android.util.Log.d("AppLog", "icon fetching for ${apkMeta.packageName}: target densityDpi: $densityDpi, found ${iconPaths.size} icon paths")
+        // Standard icons are 48dp. If we want 108dp, we need a density ~2.25x higher than native.
+        val targetDensityDpi = if (requestedAppIconSize > 0) {
+            val standardSizePx = 48 * (densityDpi / 160f)
+            (densityDpi * (requestedAppIconSize / standardSizePx)).toInt()
+        } else densityDpi
+
+        android.util.Log.d("AppLog", "icon fetching for ${apkMeta.packageName}: target densityDpi: $densityDpi (adjusted for size: $targetDensityDpi), found ${iconPaths.size} icon paths")
 
         val sortedIconPaths = iconPaths.sortedWith(Comparator { o1: IconPath, o2: IconPath ->
             if (o1.density == o2.density) {
+                // Prioritize round icons if requestedAppIconSize is large (modern look)
+                val isRound1 = o1.attrName?.contains("roundIcon", true) == true
+                val isRound2 = o2.attrName?.contains("roundIcon", true) == true
+                if (isRound1 != isRound2) return@Comparator if (isRound1) -1 else 1
+
                 val isActivity1 = o1.attrName != null && o1.attrName!!.contains("activity")
                 val isActivity2 = o2.attrName != null && o2.attrName!!.contains("activity")
                 if (isActivity1 != isActivity2) return@Comparator if (isActivity1) -1 else 1
@@ -61,8 +72,8 @@ object ApkIconFetcher {
 
             if (isNone1 != isNone2) return@Comparator if (isNone1) 1 else -1
 
-            val isHigher1 = d1 >= densityDpi
-            val isHigher2 = d2 >= densityDpi
+            val isHigher1 = d1 >= targetDensityDpi
+            val isHigher2 = d2 >= targetDensityDpi
 
             if (isHigher1 != isHigher2) {
                 return@Comparator if (isHigher1) -1 else 1

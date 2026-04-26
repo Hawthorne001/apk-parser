@@ -434,10 +434,16 @@ object XmlDrawableParser {
 
         private fun resolve(path: String, forceIsLayer: Boolean = false): Drawable? {
             if (path.startsWith("#")) return ColorDrawable(android.graphics.Color.parseColor(path))
-            if (path.startsWith("resourceId:")) {
+                if (path.startsWith("resourceId:")) {
                 val resId = try { path.substringAfter("0x").toLong(16).toInt() } catch (e: Exception) { 0 }
                 if ((resId shr 24) == 0x01) {
-                    return try { androidx.core.content.res.ResourcesCompat.getDrawable(context.resources, resId, null) } catch (e: Exception) { null }
+                    // For system resources, use Resources.getSystem() to avoid the current app's theme/Material You pollution
+                    return try {
+                        val sysRes = android.content.res.Resources.getSystem()
+                        androidx.core.content.res.ResourcesCompat.getDrawable(sysRes, resId, null)
+                    } catch (e: Exception) {
+                        try { androidx.core.content.res.ResourcesCompat.getDrawable(context.resources, resId, null) } catch (_: Exception) { null }
+                    }
                 }
                 val ref = ResourceValue.reference(resId)
                 val value = ref.toStringValue(apkInfo.resourceTable, deviceConfig)
@@ -708,7 +714,15 @@ object XmlDrawableParser {
         }
         if (colorStr.startsWith("resourceId:")) {
             val resId = try { colorStr.substringAfter("0x").toLong(16).toInt() } catch (e: Exception) { 0 }
-            if ((resId shr 24) == 0x01) return try { SolidColor(Color(androidx.core.content.res.ResourcesCompat.getColor(context.resources, resId, null))) } catch (e: Exception) { null }
+            if ((resId shr 24) == 0x01) {
+                // For system colors, use Resources.getSystem() to avoid the current app's theme/Material You pollution
+                return try {
+                    val sysRes = android.content.res.Resources.getSystem()
+                    SolidColor(Color(sysRes.getColor(resId, null)))
+                } catch (_: Exception) {
+                    try { SolidColor(Color(androidx.core.content.res.ResourcesCompat.getColor(context.resources, resId, null))) } catch (_: Exception) { null }
+                }
+            }
             val value = ResourceValue.reference(resId).toStringValue(apkInfo.resourceTable, deviceConfig)
             if (value != null && value != colorStr) return obtainBrush(context, value, apkInfo, deviceConfig, subResourceProvider)
         }

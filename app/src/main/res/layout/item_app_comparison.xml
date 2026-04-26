@@ -8,9 +8,9 @@
     android:orientation="horizontal"
     android:padding="8dp">
 
-    <FrameLayout
-        android:layout_width="60dp"
-        android:layout_height="60dp"
+    <FrameLayout android:padding="1dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:background="@drawable/red_border">
 
         <ImageView
@@ -53,8 +53,9 @@
     </LinearLayout>
 
     <FrameLayout
-        android:layout_width="60dp"
-        android:layout_height="60dp"
+        android:padding="1dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:background="@drawable/red_border">
 
         <ImageView

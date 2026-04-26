@@ -239,8 +239,27 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                         val savedLib = IconStorage.saveIcon(context, libIconFileName, appIcon)
 
                         val frameworkIcon = try {
-                            val drawable = packageManager.getApplicationIcon(packageInfo.applicationInfo!!)
-                            drawable.toBitmap(appIconSize, appIconSize)
+                            val appInfo = packageInfo.applicationInfo!!
+                            val appResources = packageManager.getResourcesForApplication(appInfo)
+                            val iconResId = appInfo.icon
+
+                            // To match the library's "honest" parsing and avoid Material You theme pollution,
+                            // we fetch the drawable from the app's resources without a theme.
+                            // We also use a high density if possible to reduce blurriness for 108dp icons.
+                            val standardSizePx = 48 * (densityDpi / 160f)
+                            val targetDensityDpi = if (appIconSize > 0) {
+                                (densityDpi * (appIconSize / standardSizePx)).toInt()
+                            } else densityDpi
+
+                            val drawable = if (iconResId != 0) {
+                                try {
+                                    androidx.core.content.res.ResourcesCompat.getDrawableForDensity(appResources, iconResId, targetDensityDpi, null)
+                                } catch (_: Exception) {
+                                    packageManager.getApplicationIcon(appInfo)
+                                }
+                            } else packageManager.getApplicationIcon(appInfo)
+
+                            drawable?.toBitmap(appIconSize, appIconSize)
                         } catch (_: Exception) {
                             null
                         }

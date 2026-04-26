@@ -23,7 +23,8 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="match_parent" android:scrollbars="vertical" android:fadeScrollbars="false"
+        android:overScrollMode="ifContentScrolls"
         android:clipToPadding="false"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         tools:listitem="@layout/item_app_comparison" />
