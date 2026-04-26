@@ -124,9 +124,6 @@ object XmlDrawableParser {
                             tintBlendMode = parseBlendMode(attr.getAttr("tintMode")),
                             autoMirror = attr.getAttr("autoMirrored")?.toBoolean() ?: false
                     )
-                    // We can't store alpha in ImageVector easily without custom properties, 
-                    // so we might need a way to pass it to imageVectorToDrawable.
-                    // For now, let's at least parse it and maybe use a workaround.
 
                     if (vectorBuilder != null) {
                         drawableStack.push(vectorBuilder!!)
@@ -152,8 +149,6 @@ object XmlDrawableParser {
                     val fillBrush = attr.getAttr("fillColor")?.let { obtainBrush(context, it, apkInfo, deviceConfig, subResourceProvider) }
                     val strokeBrush = attr.getAttr("strokeColor")?.let { obtainBrush(context, it, apkInfo, deviceConfig, subResourceProvider) }
 
-                    // Android's default for missing fillColor is transparent/null.
-                    // If fillColor is present but obtainBrush failed (e.g. unknown color format), fallback to Black.
                     val finalFill = fillBrush ?: if (attr.getAttr("fillColor") != null) SolidColor(Color.Black) else null
 
                     vectorBuilder?.addPath(
@@ -176,9 +171,6 @@ object XmlDrawableParser {
                             name = attr.getAttr("name") ?: "",
                             clipPathData = addPathNodes(pathData)
                     )
-                    // ImageVector doesn't support fillType for clip-path easily, 
-                    // but we might need it if we used a custom renderer. 
-                    // For now, Compose's ImageVector always uses NonZero for clipping.
                     if (extraGroupsStack.isNotEmpty()) {
                         extraGroupsStack[extraGroupsStack.size - 1]++
                     }
@@ -203,13 +195,8 @@ object XmlDrawableParser {
                 "gradient" -> {
                     val parent = if (drawableStack.isNotEmpty()) drawableStack.peek() else null
                     if (parent is ShapeBuilder) {
-                        // Shape gradient
                         val gradientStreamer = GradientStreamer(context, apkInfo, deviceConfig, subResourceProvider)
-                        // Trigger manual start to parse attributes
                         gradientStreamer.onStartTag(tag)
-                        // We need a way to get the brush before onEndTag if it's simple, 
-                        // or we wait until onEndTag of gradient.
-                        // Actually let's push the streamer and let it finish.
                         drawableStack.push(gradientStreamer)
                     }
                 }
@@ -325,7 +312,6 @@ object XmlDrawableParser {
                     if (brush != null && drawableStack.isNotEmpty()) {
                         when (val parent = drawableStack.peek()) {
                             is ShapeBuilder -> parent.brush = brush
-                            // ... other potential parents of gradient?
                         }
                     }
                 }
@@ -542,7 +528,6 @@ object XmlDrawableParser {
         val widthPx: Int
         val heightPx: Int
 
-        // Ratio of layer size (108dp) to standard icon size (72dp) is 1.5
         val layerSizePx = if (requestedAppIconSize > 0) (requestedAppIconSize * 1.5f) else with(density) { 108.dp.toPx() }
 
         if (requestedAppIconSize > 0) {
@@ -880,7 +865,7 @@ object XmlDrawableParser {
         val x1pSq = x1p * x1p
         val y1pSq = y1p * y1p
 
-        var radicand = (rxSq * rySq - rxSq * y1pSq - rySq * x1pSq) / (rxSq * y1pSq + rySq * x1pSq)
+        var radicand = (rxSq * rySq - rxSq * y1pSq - rySq * x1pSq) / (rxSq * rySq + rySq * x1pSq)
         radicand = max(0.0, radicand)
         val coef = (if (isLargeArc == isSweep) -1.0 else 1.0) * sqrt(radicand)
         val cxp = coef * ((rx * y1p) / ry)
@@ -922,10 +907,10 @@ object XmlDrawableParser {
             val by = ry * sin(angle + segmentDelta)
 
             val t = 4.0 / 3.0 * tan(segmentDelta / 4.0)
-            val x2 = ax - t * rx * sin(angle)
-            val y2 = ay + t * ry * cos(angle)
+            val x2 = ax - t * ry * sin(angle)
+            val y2 = ay + t * rx * cos(angle)
             val x3 = bx + t * rx * sin(angle + segmentDelta)
-            val y3 = by - t * ry * cos(angle + segmentDelta)
+            val y3 = by - t * rx * cos(angle + segmentDelta)
 
             val finalEndX: Float
             val finalEndY: Float
@@ -1023,33 +1008,7 @@ object XmlDrawableParser {
                 }
             }
             override fun onEndTag(tag: XmlNodeEndTag) {}
-            private fun Attributes.getRawValue(name: String): Int? {
-            val attr = this.get(name) ?: this.get("android:$name")
-            if (attr?.typedValue != null) {
-                try {
-                    val field = ResourceValue::class.java.getDeclaredField("value")
-                    field.isAccessible = true
-                    return field.get(attr.typedValue) as? Int
-                } catch (e: Exception) {
-                }
-            }
-            return null
-        }
-
-        private fun Attributes.getFillType(name: String): PathFillType {
-            val attr = this.get(name) ?: this.get("android:$name")
-            if (attr != null) {
-                val raw = getRawValue(name)
-                if (raw == 1) return PathFillType.EvenOdd
-                if (raw == 0) return PathFillType.NonZero
-                
-                val str = attr.toStringValue(apkInfo.resourceTable, deviceConfig)
-                if (str == "evenOdd" || str == "1") return PathFillType.EvenOdd
-            }
-            return PathFillType.NonZero
-        }
-
-        override fun onCData(xmlCData: net.dongliu.apk.parser.struct.xml.XmlCData) {}
+            override fun onCData(xmlCData: net.dongliu.apk.parser.struct.xml.XmlCData) {}
             override fun onNamespaceStart(tag: net.dongliu.apk.parser.struct.xml.XmlNamespaceStartTag) {}
             override fun onNamespaceEnd(tag: net.dongliu.apk.parser.struct.xml.XmlNamespaceEndTag) {}
         }
@@ -1094,6 +1053,7 @@ object XmlDrawableParser {
         private var centerX = 0f
         private var centerY = 0f
         private var gradientRadius = 0f
+        private var angle = 0f
         private val stops = mutableListOf<Float>()
         private val colors = mutableListOf<Color>()
 
@@ -1111,7 +1071,11 @@ object XmlDrawableParser {
             val attr = tag.attributes
             when (tag.name) {
                 "gradient" -> {
-                    type = attr.getAttr("type") ?: "linear"
+                    type = when (attr.getAttr("type")) {
+                        "1", "radial" -> "radial"
+                        "2", "sweep" -> "sweep"
+                        else -> "linear"
+                    }
                     startColor = attr.getAttr("startColor")?.let { resolveColor(context, it, apkInfo, deviceConfig, subResourceProvider) }
                             ?: Color.Transparent
                     endColor = attr.getAttr("endColor")?.let { resolveColor(context, it, apkInfo, deviceConfig, subResourceProvider) }
@@ -1124,6 +1088,7 @@ object XmlDrawableParser {
                     centerX = attr.getAttr("centerX")?.toFloat() ?: 0f
                     centerY = attr.getAttr("centerY")?.toFloat() ?: 0f
                     gradientRadius = attr.getAttr("gradientRadius")?.toFloat() ?: 0f
+                    angle = attr.getAttr("angle")?.toFloat() ?: 0f
                 }
 
                 "item" -> {
@@ -1166,44 +1131,63 @@ object XmlDrawableParser {
                             center = androidx.compose.ui.geometry.Offset(centerX, centerY)
                     )
 
-                    else -> Brush.linearGradient(
-                            colorStops = finalStops.zip(finalColors).toTypedArray(),
-                            start = androidx.compose.ui.geometry.Offset(startX, startY),
-                            end = androidx.compose.ui.geometry.Offset(endX, endY)
-                    )
+                    else -> {
+                        if (startX == 0f && startY == 0f && endX == 0f && endY == 0f && angle != 0f) {
+                            val coords = calculateGradientCoords(angle)
+                            RelativeLinearGradient(finalStops.zip(finalColors), coords)
+                        } else {
+                            Brush.linearGradient(
+                                    colorStops = finalStops.zip(finalColors).toTypedArray(),
+                                    start = androidx.compose.ui.geometry.Offset(startX, startY),
+                                    end = androidx.compose.ui.geometry.Offset(endX, endY)
+                            )
+                        }
+                    }
                 }
             }
         }
-
-        private fun Attributes.getRawValue(name: String): Int? {
-            val attr = this.get(name) ?: this.get("android:$name")
-            if (attr?.typedValue != null) {
-                try {
-                    val field = ResourceValue::class.java.getDeclaredField("value")
-                    field.isAccessible = true
-                    return field.get(attr.typedValue) as? Int
-                } catch (e: Exception) {
-                }
+        
+        private fun calculateGradientCoords(angle: Float): FloatArray {
+            val normalizedAngle = ((angle % 360) + 360) % 360
+            return when (normalizedAngle.toInt()) {
+                0 -> floatArrayOf(0f, 0.5f, 1f, 0.5f)
+                45 -> floatArrayOf(0f, 1f, 1f, 0f)
+                90 -> floatArrayOf(0.5f, 1f, 0.5f, 0f)
+                135 -> floatArrayOf(1f, 1f, 0f, 0f)
+                180 -> floatArrayOf(1f, 0.5f, 0f, 0.5f)
+                225 -> floatArrayOf(1f, 0f, 0f, 1f)
+                270 -> floatArrayOf(0.5f, 0f, 0.5f, 1f)
+                315 -> floatArrayOf(0f, 0f, 1f, 1f)
+                else -> floatArrayOf(0f, 0.5f, 1f, 0.5f)
             }
-            return null
-        }
-
-        private fun Attributes.getFillType(name: String): PathFillType {
-            val attr = this.get(name) ?: this.get("android:$name")
-            if (attr != null) {
-                val raw = getRawValue(name)
-                if (raw == 1) return PathFillType.EvenOdd
-                if (raw == 0) return PathFillType.NonZero
-
-                val str = attr.toStringValue(apkInfo.resourceTable, deviceConfig)
-                if (str == "evenOdd" || str == "1") return PathFillType.EvenOdd
-            }
-            return PathFillType.NonZero
         }
 
         override fun onCData(xmlCData: net.dongliu.apk.parser.struct.xml.XmlCData) {}
         override fun onNamespaceStart(tag: net.dongliu.apk.parser.struct.xml.XmlNamespaceStartTag) {}
         override fun onNamespaceEnd(tag: net.dongliu.apk.parser.struct.xml.XmlNamespaceEndTag) {}
+    }
+
+    private class RelativeLinearGradient(val stops: List<Pair<Float, Color>>, val coords: FloatArray) : ShaderBrush() {
+        override fun createShader(size: androidx.compose.ui.geometry.Size): android.graphics.Shader {
+            return android.graphics.LinearGradient(
+                coords[0] * size.width, coords[1] * size.height,
+                coords[2] * size.width, coords[3] * size.height,
+                stops.map { it.second.toArgb() }.toIntArray(),
+                stops.map { it.first }.toFloatArray(),
+                android.graphics.Shader.TileMode.CLAMP
+            )
+        }
+    }
+
+    private fun imageBrushDrawable(context: Context, brush: Brush, size: Int): Drawable {
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(android.graphics.Canvas(bitmap))
+        val drawScope = CanvasDrawScope()
+        val density = Density(context.resources.displayMetrics.density)
+        drawScope.draw(density, LayoutDirection.Ltr, canvas, androidx.compose.ui.geometry.Size(size.toFloat(), size.toFloat())) {
+            drawRect(brush = brush)
+        }
+        return VectorBitmapDrawable(context, bitmap)
     }
 
     private fun parseBlendMode(modeStr: String?): BlendMode = when (modeStr) {

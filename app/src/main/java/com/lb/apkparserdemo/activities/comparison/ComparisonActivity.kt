@@ -44,9 +44,11 @@ class ComparisonActivity : BoundActivity<ActivityComparisonBinding>(ActivityComp
 
         viewModel.items.observe(this) {
             adapter.submitList(it)
+            binding.recyclerView.isVisible = true
         }
         viewModel.loading.observe(this) {
             binding.progressBar.isVisible = it
+            if (it) binding.recyclerView.isVisible = false
         }
     }
 }
