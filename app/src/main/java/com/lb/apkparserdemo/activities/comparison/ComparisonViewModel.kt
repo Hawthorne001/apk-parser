@@ -2,6 +2,7 @@ package com.lb.apkparserdemo.activities.comparison
 
 import android.app.Application
 import android.graphics.BitmapFactory
+import androidx.core.graphics.get
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -33,7 +34,7 @@ class ComparisonViewModel(application: Application) : AndroidViewModel(applicati
             val baseList = allItems
                 .filter { scannedPackages.isEmpty() || scannedPackages.contains(it.packageName) }
                 .sortedBy { it.appName.lowercase() }
-            
+
             // Perform pixel-by-pixel comparison for all items before showing them
             val finalItems = withContext(Dispatchers.Default) {
                 baseList.map { info ->
@@ -44,7 +45,7 @@ class ComparisonViewModel(application: Application) : AndroidViewModel(applicati
                     ComparisonItem(info, score)
                 }
             }
-            
+
             _items.value = finalItems
             _loading.value = false
         }
@@ -52,18 +53,18 @@ class ComparisonViewModel(application: Application) : AndroidViewModel(applicati
 
     private fun compareIcons(libFile: File, fwFile: File): Float {
         if (!libFile.exists() || !fwFile.exists()) return 0f
-        
+
         val libBitmap = BitmapFactory.decodeFile(libFile.absolutePath) ?: return 0f
         val fwBitmap = BitmapFactory.decodeFile(fwFile.absolutePath) ?: return 0f
-        
+
         if (libBitmap.width != fwBitmap.width || libBitmap.height != fwBitmap.height) return 0f
-        
+
         var matchingPixels = 0
         val totalPixels = libBitmap.width * libBitmap.height
-        
+
         for (y in 0 until libBitmap.height) {
             for (x in 0 until libBitmap.width) {
-                if (libBitmap.getPixel(x, y) == fwBitmap.getPixel(x, y)) {
+                if (libBitmap[x, y] == fwBitmap[x, y]) {
                     matchingPixels++
                 }
             }

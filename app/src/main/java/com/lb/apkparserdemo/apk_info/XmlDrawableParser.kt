@@ -20,6 +20,10 @@ import androidx.compose.ui.graphics.vector.*
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.drawable.toDrawable
+import androidx.core.graphics.toColorInt
+import androidx.core.graphics.withRotation
 import net.dongliu.apk.parser.bean.DeviceConfig
 import net.dongliu.apk.parser.parser.BinaryXmlParser
 import net.dongliu.apk.parser.parser.XmlStreamer
@@ -302,8 +306,8 @@ object XmlDrawableParser {
                 "color" -> {
                     val color = attr.getAttr("color")?.let { resolveColor(context, it, apkInfo, deviceConfig, subResourceProvider) }
                             ?: Color.Transparent
-                    if (depth == 0) result = ColorDrawable(color.toArgb())
-                    else handleFinishedDrawable(ColorDrawable(color.toArgb()))
+                    if (depth == 0) result = color.toArgb().toDrawable()
+                    else handleFinishedDrawable(color.toArgb().toDrawable())
                 }
             }
             depth++
@@ -347,9 +351,9 @@ object XmlDrawableParser {
                     val builder = drawableStack.pop() as AdaptiveIconBuilder
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         val bg = builder.background
-                                ?: ColorDrawable(android.graphics.Color.TRANSPARENT)
+                                ?: android.graphics.Color.TRANSPARENT.toDrawable()
                         val fg = builder.foreground
-                                ?: ColorDrawable(android.graphics.Color.TRANSPARENT)
+                                ?: android.graphics.Color.TRANSPARENT.toDrawable()
 
                         if (bg is ColorDrawable && fg is ColorDrawable && (bg as ColorDrawable).color == android.graphics.Color.TRANSPARENT && (fg as ColorDrawable).color == android.graphics.Color.TRANSPARENT) {
                             android.util.Log.w("AppLog", "Warning: Adaptive icon for ${apkInfo.apkMetaTranslator.apkMeta.packageName} has both background and foreground as transparent ColorDrawable. This is suspicious.")
@@ -366,9 +370,9 @@ object XmlDrawableParser {
                     val drawable = if (builder.brush != null) {
                         imageBrushDrawable(context, builder.brush!!, baseSize)
                     } else if (builder.color != null) {
-                        ColorDrawable(builder.color!!.toArgb())
+                        builder.color!!.toArgb().toDrawable()
                     } else {
-                        ColorDrawable(android.graphics.Color.TRANSPARENT)
+                        android.graphics.Color.TRANSPARENT.toDrawable()
                     }
                     handleFinishedDrawable(drawable)
                 }
@@ -463,7 +467,7 @@ object XmlDrawableParser {
 
         private fun resolve(path: String, forceIsLayer: Boolean = false): Drawable? {
             if (path.startsWith("#"))
-                return ColorDrawable(android.graphics.Color.parseColor(path))
+                return path.toColorInt().toDrawable()
             if (path.startsWith("resourceId:")) {
                 val resId = try {
                     path.substringAfter("0x").toLong(16).toInt()
@@ -493,7 +497,7 @@ object XmlDrawableParser {
                 if (xmlDrawable != null) return xmlDrawable
                 return try {
                     val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    if (bitmap != null) BitmapDrawable(context.resources, bitmap) else null
+                    if (bitmap != null) bitmap.toDrawable(context.resources) else null
                 } catch (e: Exception) {
                     null
                 }
@@ -582,10 +586,9 @@ object XmlDrawableParser {
                 // Static previews use level 0, rotationAngle is simply fromDegrees.
                 val rotationAngle = fromDegrees + (toDegrees - fromDegrees) * (level / 10000.0f)
 
-                canvas.save()
-                canvas.rotate(rotationAngle, px, py)
-                dr.draw(canvas)
-                canvas.restore()
+                canvas.withRotation(rotationAngle, px, py) {
+                    dr.draw(this)
+                }
             }
 
             private fun parsePivot(p: String, size: Float): Float {
@@ -634,7 +637,7 @@ object XmlDrawableParser {
         val widthPx = if (requestedAppIconSize > 0) (if (isLayer) layerSizePx.toInt() else requestedAppIconSize) else with(density) { imageVector.defaultWidth.toPx() }.toInt().coerceAtLeast(1)
         val heightPx = if (requestedAppIconSize > 0) (if (isLayer) layerSizePx.toInt() else requestedAppIconSize) else with(density) { imageVector.defaultHeight.toPx() }.toInt().coerceAtLeast(1)
 
-        val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(widthPx, heightPx)
         bitmap.density = context.resources.displayMetrics.densityDpi
         val canvas = Canvas(android.graphics.Canvas(bitmap))
         val drawScope = CanvasDrawScope()
@@ -852,7 +855,7 @@ object XmlDrawableParser {
                 else -> colorStr
             }
             return try {
-                SolidColor(Color(android.graphics.Color.parseColor(c)))
+                SolidColor(Color(c.toColorInt()))
             } catch (e: Exception) {
                 null
             }
@@ -1015,7 +1018,7 @@ object XmlDrawableParser {
     }
 
     private fun imageBrushDrawable(context: Context, brush: Brush, size: Int): Drawable {
-        val b = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        val b = createBitmap(size, size);
         val canvas = Canvas(android.graphics.Canvas(b))
         CanvasDrawScope().draw(Density(context.resources.displayMetrics.density), LayoutDirection.Ltr, canvas, androidx.compose.ui.geometry.Size(size.toFloat(), size.toFloat())) { drawRect(brush) }
         return VectorBitmapDrawable(context, b)

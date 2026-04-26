@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.ImageDecoder
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.BitmapDrawable
@@ -12,7 +11,10 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.LayerDrawable
 import android.os.Build
+import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toBitmap
+import androidx.core.graphics.drawable.toDrawable
+import androidx.core.graphics.toColorInt
 import com.lb.apkparserdemo.apk_info.AbstractZipFilter
 import com.lb.apkparserdemo.apk_info.ApkInfo
 import com.lb.apkparserdemo.apk_info.XmlDrawableParser
@@ -109,9 +111,9 @@ object ApkIconFetcher {
 
         for (colorPath in colorIconsPaths) {
             try {
-                val color = Color.parseColor(colorPath)
+                val color = colorPath.toColorInt()
                 val size = if (requestedAppIconSize > 0) requestedAppIconSize else AppInfoUtil.getAppIconSize(context)
-                val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+                val bitmap = createBitmap(size, size)
                 val canvas = Canvas(bitmap)
                 canvas.drawColor(color)
                 android.util.Log.d("AppLog", "icon fetching for ${apkMeta.packageName}: SUCCESS with Color: $colorPath")
@@ -176,7 +178,7 @@ object ApkIconFetcher {
     ): Drawable? {
         if (path.startsWith("#")) {
             return try {
-                ColorDrawable(Color.parseColor(path))
+                path.toColorInt().toDrawable()
             } catch (e: Exception) {
                 null
             }
@@ -190,7 +192,7 @@ object ApkIconFetcher {
                         for (res in resources) {
                             val value = res.resourceEntry.toStringValue(apkInfo.resourceTable, deviceConfig)
                             if (value != null && (value.startsWith("#") || value.startsWith("res/"))) {
-                                if (value.startsWith("#")) return ColorDrawable(Color.parseColor(value))
+                                if (value.startsWith("#")) return value.toColorInt().toDrawable()
 
                                 filterGenerator.generateZipFilter().use { filter ->
                                     val subBytes = filter.getByteArrayForEntries(emptySet(), hashSetOf(value))?.get(value)
@@ -223,7 +225,7 @@ object ApkIconFetcher {
                             for (res in resources) {
                                 val value = res.resourceEntry.toStringValue(apkInfo.resourceTable, deviceConfig)
                                 if (value != null && value != path) {
-                                    if (value.startsWith("#")) return ColorDrawable(Color.parseColor(value))
+                                    if (value.startsWith("#")) return value.toColorInt().toDrawable()
                                     filterGenerator.generateZipFilter().use { filter ->
                                         val subBytes = if (isZipPath(value)) filter.getByteArrayForEntries(emptySet(), hashSetOf(value))?.get(value) else null
                                         return fetchDrawable(context, value, subBytes, apkInfo, deviceConfig, filterGenerator, requestedAppIconSize)
@@ -241,7 +243,7 @@ object ApkIconFetcher {
 
         if (!path.endsWith(".xml", true)) {
             return getAppIconFromByteArray(bytes, requestedAppIconSize, path)?.let {
-                BitmapDrawable(context.resources, it)
+                it.toDrawable(context.resources)
             }
         }
 
