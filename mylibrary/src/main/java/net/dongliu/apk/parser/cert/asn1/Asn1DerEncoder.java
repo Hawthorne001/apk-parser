@@ -63,14 +63,12 @@ public final class Asn1DerEncoder {
                     containerClass.getName() + " not annotated with " + Asn1Class.class.getName());
         }
         final Asn1Type containerType = containerAnnotation.type();
-        switch (containerType) {
-            case Choice:
-                return Asn1DerEncoder.toChoice(container);
-            case Sequence:
-                return Asn1DerEncoder.toSequence(container);
-            default:
-                throw new Asn1EncodingException("Unsupported container type: " + containerType);
-        }
+        return switch (containerType) {
+            case Choice -> Asn1DerEncoder.toChoice(container);
+            case Sequence -> Asn1DerEncoder.toSequence(container);
+            default ->
+                    throw new Asn1EncodingException("Unsupported container type: " + containerType);
+        };
     }
 
     @Nullable
@@ -453,8 +451,7 @@ public final class Asn1DerEncoder {
             switch (targetType) {
                 case OctetString:
                     byte[] value = null;
-                    if (source instanceof ByteBuffer) {
-                        final ByteBuffer buf = (ByteBuffer) source;
+                    if (source instanceof ByteBuffer buf) {
                         value = new byte[buf.remaining()];
                         buf.slice().get(value);
                     } else if (source instanceof byte[]) {

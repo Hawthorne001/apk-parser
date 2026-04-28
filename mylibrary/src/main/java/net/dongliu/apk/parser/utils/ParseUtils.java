@@ -117,13 +117,10 @@ public class ParseUtils {
         final ByteBuffer lazyBuffer = buffer.duplicate();
         lazyBuffer.order(buffer.order());
 
-        final StringPool.StringSource source = new StringPool.StringSource() {
-            @Override
-            public String read(int i) {
-                long offset = stringPos + Unsigned.toLong(offsets[i]);
-                Buffers.position(lazyBuffer, offset);
-                return ParseUtils.readString(lazyBuffer, utf8);
-            }
+        final StringPool.StringSource source = i -> {
+            long offset = stringPos + Unsigned.toLong(offsets[i]);
+            Buffers.position(lazyBuffer, offset);
+            return ParseUtils.readString(lazyBuffer, utf8);
         };
 
         final StringPool stringPool = new StringPool(stringPoolHeader.getStringCount(), source);

@@ -131,26 +131,23 @@ public class DexParser {
         final ByteBuffer lazyBuffer = this.buffer.duplicate();
         lazyBuffer.order(this.buffer.order());
 
-        final StringPool.StringSource source = new StringPool.StringSource() {
-            @Override
-            public String read(int i) {
-                long offset = offsets[i];
-                Buffers.position(lazyBuffer, offset);
-                // read varints
-                int len = 0;
-                int count = 0;
-                short s;
-                do {
-                    if (count > 4) {
-                        throw new ParserException("read varints error.");
-                    }
-                    s = Buffers.readUByte(lazyBuffer);
-                    len |= (s & 0x7f) << (count * 7);
-                    count++;
-                } while ((s & 0x80) != 0);
+        final StringPool.StringSource source = i -> {
+            long offset = offsets[i];
+            Buffers.position(lazyBuffer, offset);
+            // read varints
+            int len = 0;
+            int count = 0;
+            short s;
+            do {
+                if (count > 4) {
+                    throw new ParserException("read varints error.");
+                }
+                s = Buffers.readUByte(lazyBuffer);
+                len |= (s & 0x7f) << (count * 7);
+                count++;
+            } while ((s & 0x80) != 0);
 
-                return readString(lazyBuffer, len);
-            }
+            return readString(lazyBuffer, len);
         };
 
         return new StringPool(offsets.length, source);

@@ -257,7 +257,7 @@ public class ApkMetaTranslator implements XmlStreamer {
     public java.util.Map<Locale, String> getAllLabels() {
         if (this.labelResId == 0) {
             String label = this.apkMetaBuilder.getLabel();
-            return label != null ? Collections.singletonMap(Locale.ROOT, label) : Collections.<Locale, String>emptyMap();
+            return label != null ? Collections.singletonMap(Locale.ROOT, label) : Collections.emptyMap();
         }
         List<ResourceTable.Resource> resources = this.resourceTable.getResourcesById(this.labelResId);
         java.util.Map<Locale, String> map = new java.util.HashMap<>();

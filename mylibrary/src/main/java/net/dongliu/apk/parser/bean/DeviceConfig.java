@@ -1,6 +1,8 @@
 package net.dongliu.apk.parser.bean;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
 import java.util.Locale;
 
 /**
@@ -47,6 +49,7 @@ public class DeviceConfig {
         return density;
     }
 
+    @NonNull
     @Override
     public String toString() {
         return "DeviceConfig{" +

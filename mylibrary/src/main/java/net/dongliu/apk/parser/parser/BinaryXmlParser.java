@@ -221,22 +221,15 @@ public class BinaryXmlParser {
             return str;
         }
         final int value = Integer.parseInt(str);
-        switch (attributeName) {
-            case "screenOrientation":
-                return AttributeValues.getScreenOrientation(value);
-            case "configChanges":
-                return AttributeValues.getConfigChanges(value);
-            case "windowSoftInputMode":
-                return AttributeValues.getWindowSoftInputMode(value);
-            case "launchMode":
-                return AttributeValues.getLaunchMode(value);
-            case "installLocation":
-                return AttributeValues.getInstallLocation(value);
-            case "protectionLevel":
-                return AttributeValues.getProtectionLevel(value);
-            default:
-                return str;
-        }
+        return switch (attributeName) {
+            case "screenOrientation" -> AttributeValues.getScreenOrientation(value);
+            case "configChanges" -> AttributeValues.getConfigChanges(value);
+            case "windowSoftInputMode" -> AttributeValues.getWindowSoftInputMode(value);
+            case "launchMode" -> AttributeValues.getLaunchMode(value);
+            case "installLocation" -> AttributeValues.getInstallLocation(value);
+            case "protectionLevel" -> AttributeValues.getProtectionLevel(value);
+            default -> str;
+        };
     }
 
     private Attribute readAttribute() {

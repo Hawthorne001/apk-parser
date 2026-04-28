@@ -295,15 +295,12 @@ public final class Asn1BerParser {
                     containerClass.getName() + " is not annotated with "
                             + Asn1Class.class.getName());
         }
-        switch (containerAnnotation.type()) {
-            case Choice:
-            case Sequence:
-                return containerAnnotation.type();
-            default:
-                throw new Asn1DecodingException(
-                        "Unsupported ASN.1 container annotation type: "
-                                + containerAnnotation.type());
-        }
+        return switch (containerAnnotation.type()) {
+            case Choice, Sequence -> containerAnnotation.type();
+            default -> throw new Asn1DecodingException(
+                    "Unsupported ASN.1 container annotation type: "
+                            + containerAnnotation.type());
+        };
     }
 
     private static Class<?> getElementType(final Field field)

@@ -82,51 +82,34 @@ public abstract class BerEncoding {
     public static final int TAG_NUMBER_SET = 0x11;
 
     public static int getTagNumber(final Asn1Type dataType) {
-        switch (dataType) {
-            case Integer:
-                return BerEncoding.TAG_NUMBER_INTEGER;
-            case ObjectIdentifier:
-                return BerEncoding.TAG_NUMBER_OBJECT_IDENTIFIER;
-            case OctetString:
-                return BerEncoding.TAG_NUMBER_OCTET_STRING;
-            case SetOf:
-                return BerEncoding.TAG_NUMBER_SET;
-            case Sequence:
-            case SequenceOf:
-                return BerEncoding.TAG_NUMBER_SEQUENCE;
-            default:
-                throw new IllegalArgumentException("Unsupported data type: " + dataType);
-        }
+        return switch (dataType) {
+            case Integer -> BerEncoding.TAG_NUMBER_INTEGER;
+            case ObjectIdentifier -> BerEncoding.TAG_NUMBER_OBJECT_IDENTIFIER;
+            case OctetString -> BerEncoding.TAG_NUMBER_OCTET_STRING;
+            case SetOf -> BerEncoding.TAG_NUMBER_SET;
+            case Sequence, SequenceOf -> BerEncoding.TAG_NUMBER_SEQUENCE;
+            default -> throw new IllegalArgumentException("Unsupported data type: " + dataType);
+        };
     }
 
     public static int getTagClass(final Asn1TagClass tagClass) {
-        switch (tagClass) {
-            case Application:
-                return BerEncoding.TAG_CLASS_APPLICATION;
-            case ContextSpecific:
-                return BerEncoding.TAG_CLASS_CONTEXT_SPECIFIC;
-            case Private:
-                return BerEncoding.TAG_CLASS_PRIVATE;
-            case Universal:
-                return BerEncoding.TAG_CLASS_UNIVERSAL;
-            default:
-                throw new IllegalArgumentException("Unsupported tag class: " + tagClass);
-        }
+        return switch (tagClass) {
+            case Application -> BerEncoding.TAG_CLASS_APPLICATION;
+            case ContextSpecific -> BerEncoding.TAG_CLASS_CONTEXT_SPECIFIC;
+            case Private -> BerEncoding.TAG_CLASS_PRIVATE;
+            case Universal -> BerEncoding.TAG_CLASS_UNIVERSAL;
+            default -> throw new IllegalArgumentException("Unsupported tag class: " + tagClass);
+        };
     }
 
     public static String tagClassToString(final int typeClass) {
-        switch (typeClass) {
-            case BerEncoding.TAG_CLASS_APPLICATION:
-                return "APPLICATION";
-            case BerEncoding.TAG_CLASS_CONTEXT_SPECIFIC:
-                return "";
-            case BerEncoding.TAG_CLASS_PRIVATE:
-                return "PRIVATE";
-            case BerEncoding.TAG_CLASS_UNIVERSAL:
-                return "UNIVERSAL";
-            default:
-                throw new IllegalArgumentException("Unsupported type class: " + typeClass);
-        }
+        return switch (typeClass) {
+            case BerEncoding.TAG_CLASS_APPLICATION -> "APPLICATION";
+            case BerEncoding.TAG_CLASS_CONTEXT_SPECIFIC -> "";
+            case BerEncoding.TAG_CLASS_PRIVATE -> "PRIVATE";
+            case BerEncoding.TAG_CLASS_UNIVERSAL -> "UNIVERSAL";
+            default -> throw new IllegalArgumentException("Unsupported type class: " + typeClass);
+        };
     }
 
     public static String tagClassAndNumberToString(final int tagClass, final int tagNumber) {
@@ -136,22 +119,15 @@ public abstract class BerEncoding {
     }
 
     public static String tagNumberToString(final int tagNumber) {
-        switch (tagNumber) {
-            case BerEncoding.TAG_NUMBER_INTEGER:
-                return "INTEGER";
-            case BerEncoding.TAG_NUMBER_OCTET_STRING:
-                return "OCTET STRING";
-            case BerEncoding.TAG_NUMBER_NULL:
-                return "NULL";
-            case BerEncoding.TAG_NUMBER_OBJECT_IDENTIFIER:
-                return "OBJECT IDENTIFIER";
-            case BerEncoding.TAG_NUMBER_SEQUENCE:
-                return "SEQUENCE";
-            case BerEncoding.TAG_NUMBER_SET:
-                return "SET";
-            default:
-                return "0x" + Integer.toHexString(tagNumber);
-        }
+        return switch (tagNumber) {
+            case BerEncoding.TAG_NUMBER_INTEGER -> "INTEGER";
+            case BerEncoding.TAG_NUMBER_OCTET_STRING -> "OCTET STRING";
+            case BerEncoding.TAG_NUMBER_NULL -> "NULL";
+            case BerEncoding.TAG_NUMBER_OBJECT_IDENTIFIER -> "OBJECT IDENTIFIER";
+            case BerEncoding.TAG_NUMBER_SEQUENCE -> "SEQUENCE";
+            case BerEncoding.TAG_NUMBER_SET -> "SET";
+            default -> "0x" + Integer.toHexString(tagNumber);
+        };
     }
 
     /**

@@ -241,11 +241,11 @@ public abstract class ResourceValue {
                 int reqDensity = requestedConfig.getDensity();
                 int candDensity = candidate.type.density;
                 int curDensity = current.type.density;
-                
+
                 if (candDensity != curDensity) {
                     if (candDensity == Densities.ANY) return true;
                     if (curDensity == Densities.ANY) return false;
-                    
+
                     int candidateDiff = Math.abs(candDensity - reqDensity);
                     int currentDiff = Math.abs(curDensity - reqDensity);
                     if (candidateDiff != currentDiff) {
@@ -329,29 +329,15 @@ public abstract class ResourceValue {
         @Override
         public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
             final short unit = (short) (this.value & 0xf);
-            final String unitStr;
-            switch (unit) {
-                case ResValue.ResDataCOMPLEX.UNIT_MM:
-                    unitStr = "mm";
-                    break;
-                case ResValue.ResDataCOMPLEX.UNIT_PX:
-                    unitStr = "px";
-                    break;
-                case ResValue.ResDataCOMPLEX.UNIT_DIP:
-                    unitStr = "dp";
-                    break;
-                case ResValue.ResDataCOMPLEX.UNIT_SP:
-                    unitStr = "sp";
-                    break;
-                case ResValue.ResDataCOMPLEX.UNIT_PT:
-                    unitStr = "pt";
-                    break;
-                case ResValue.ResDataCOMPLEX.UNIT_IN:
-                    unitStr = "in";
-                    break;
-                default:
-                    unitStr = "unknown unit:0x" + Integer.toHexString(unit);
-            }
+            final String unitStr = switch (unit) {
+                case ResValue.ResDataCOMPLEX.UNIT_MM -> "mm";
+                case ResValue.ResDataCOMPLEX.UNIT_PX -> "px";
+                case ResValue.ResDataCOMPLEX.UNIT_DIP -> "dp";
+                case ResValue.ResDataCOMPLEX.UNIT_SP -> "sp";
+                case ResValue.ResDataCOMPLEX.UNIT_PT -> "pt";
+                case ResValue.ResDataCOMPLEX.UNIT_IN -> "in";
+                default -> "unknown unit:0x" + Integer.toHexString(unit);
+            };
             return complexToFloat(this.value) + unitStr;
         }
     }
@@ -365,17 +351,11 @@ public abstract class ResourceValue {
         @Override
         public String toStringValue(final ResourceTable resourceTable, @Nullable final DeviceConfig config) {
             final short type = (short) (this.value & 0xf);
-            final String pstr;
-            switch (type) {
-                case ResValue.ResDataCOMPLEX.UNIT_FRACTION:
-                    pstr = "%";
-                    break;
-                case ResValue.ResDataCOMPLEX.UNIT_FRACTION_PARENT:
-                    pstr = "%p";
-                    break;
-                default:
-                    pstr = "unknown type:0x" + Integer.toHexString(type);
-            }
+            final String pstr = switch (type) {
+                case ResValue.ResDataCOMPLEX.UNIT_FRACTION -> "%";
+                case ResValue.ResDataCOMPLEX.UNIT_FRACTION_PARENT -> "%p";
+                default -> "unknown type:0x" + Integer.toHexString(type);
+            };
             return (complexToFloat(this.value) * 100) + pstr;
         }
     }

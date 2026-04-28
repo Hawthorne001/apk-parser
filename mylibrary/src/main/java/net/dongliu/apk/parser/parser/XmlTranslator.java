@@ -11,6 +11,7 @@ import net.dongliu.apk.parser.struct.xml.XmlNodeStartTag;
 import net.dongliu.apk.parser.utils.xml.XmlEscaper;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * trans to xml text when parse binary xml file.
@@ -40,11 +41,7 @@ public class XmlTranslator implements XmlStreamer {
         this.sb.append('<');
         if (xmlNodeStartTag.namespace != null) {
             final String prefix = this.namespaces.getPrefixViaUri(xmlNodeStartTag.namespace);
-            if (prefix != null) {
-                this.sb.append(prefix).append(":");
-            } else {
-                this.sb.append(xmlNodeStartTag.namespace).append(":");
-            }
+            this.sb.append(Objects.requireNonNullElseGet(prefix, () -> xmlNodeStartTag.namespace)).append(":");
         }
         this.sb.append(xmlNodeStartTag.name);
         final List<XmlNamespaces.XmlNamespace> nps = this.namespaces.consumeNameSpaces();

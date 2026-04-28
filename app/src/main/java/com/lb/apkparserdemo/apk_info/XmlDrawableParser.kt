@@ -81,7 +81,7 @@ object XmlDrawableParser {
         private var isInsideAdaptiveLayer = false
 
         private fun Attributes.getAttr(name: String): String? {
-            val attr = this.get(name) ?: this.get("android:$name")
+            val attr = this[name] ?: this["android:$name"]
             if (attr != null) {
                 val valStr = attr.toStringValue(apkInfo.resourceTable, deviceConfig)
                 if (valStr is String) return valStr
@@ -91,13 +91,13 @@ object XmlDrawableParser {
         }
 
         private fun Attributes.getRawValue(name: String): Int? {
-            val attr = this.get(name) ?: this.get("android:$name")
+            val attr = this[name] ?: this["android:$name"]
             // Accessed via public field in modified ResourceValue class
             return attr?.typedValue?.value
         }
 
         private fun Attributes.getFillType(name: String): PathFillType {
-            val attr = this.get(name) ?: this.get("android:$name")
+            val attr = this[name] ?: this["android:$name"]
             if (attr != null) {
                 val raw = getRawValue(name)
                 if (raw == 1) return PathFillType.EvenOdd
@@ -901,8 +901,8 @@ object XmlDrawableParser {
         val streamer = object : XmlStreamer {
             override fun onStartTag(tag: XmlNodeStartTag) {
                 if (tag.name == "item") {
-                    val colorAttr = tag.attributes.get("color")
-                            ?: tag.attributes.get("android:color")
+                    val colorAttr = tag.attributes["color"]
+                            ?: tag.attributes["android:color"]
                     colorAttr?.toStringValue(apkInfo.resourceTable, deviceConfig)?.let {
                         val c = resolveColor(context, it, apkInfo, deviceConfig, subResourceProvider)
                         if (res == Color.Transparent) res = c
@@ -948,9 +948,9 @@ object XmlDrawableParser {
         private var angle = 0f
         private val stops = mutableListOf<Float>();
         private val colors = mutableListOf<Color>()
-        private fun Attributes.getAttr(name: String) = (this.get(name)
-                ?: this.get("android:$name"))?.toStringValue(apkInfo.resourceTable, deviceConfig)
-                ?: (this.get(name) ?: this.get("android:$name"))?.value
+        private fun Attributes.getAttr(name: String) = (this[name]
+                ?: this["android:$name"])?.toStringValue(apkInfo.resourceTable, deviceConfig)
+                ?: (this[name] ?: this["android:$name"])?.value
 
         override fun onStartTag(tag: XmlNodeStartTag) {
             val a = tag.attributes

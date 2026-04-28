@@ -17,7 +17,7 @@ public class DexClass {
     public final String superClass;
     private final int accessFlags;
 
-    public DexClass(final String classType, final String superClass, final int accessFlags) {
+    public DexClass(final String classType, @Nullable final String superClass, final int accessFlags) {
         this.classType = classType;
         this.superClass = superClass;
         this.accessFlags = accessFlags;
