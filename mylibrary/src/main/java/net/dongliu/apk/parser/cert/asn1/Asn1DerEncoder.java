@@ -105,8 +105,7 @@ public final class Asn1DerEncoder {
     private static byte[] toSequence(final Object container) throws Asn1EncodingException {
         final Class<?> containerClass = container.getClass();
         final List<AnnotatedField> fields = Asn1DerEncoder.getAnnotatedFields(container);
-        Collections.sort(
-                fields, Comparator.comparingInt(f -> f.annotation.index()));
+        Collections.sort(fields, (f1, f2) -> Integer.compare(f1.annotation.index(), f2.annotation.index()));
         if (fields.size() > 1) {
             AnnotatedField lastField = null;
             for (final AnnotatedField field : fields) {

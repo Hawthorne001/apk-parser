@@ -31,7 +31,6 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -189,8 +188,7 @@ public final class Asn1BerParser {
     private static <T> T parseSequence(final BerDataValue container, final Class<T> containerClass)
             throws Asn1DecodingException {
         final List<AnnotatedField> fields = Asn1BerParser.getAnnotatedFields(containerClass);
-        Collections.sort(
-                fields, Comparator.comparingInt(f -> f.annotation.index()));
+        Collections.sort(fields, (f1, f2) -> Integer.compare(f1.annotation.index(), f2.annotation.index()));
         // Check that there are no fields with the same index
         if (fields.size() > 1) {
             AnnotatedField lastField = null;

@@ -14,7 +14,6 @@
     <string name="system_apps_errors">System apps errors (out of all the above of the library):</string>
     <string name="summary">Done parsing all APK files of all installed apps. </string>
     <string name="all_are_system_errors">Found various errors while handling the APK files, but all of them are of system app</string>
-    <string name="not_all_are_system_errors">Some errors are not of system apps</string>
     <string name="intro">This sample tries to parse all the APK files of all installed apps using the library, and compares it with what\'s expected from the Android framework.
 \nCheck the logs for more information about the process and the errors.</string>
 

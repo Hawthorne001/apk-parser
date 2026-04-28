@@ -37,7 +37,7 @@ public class ResourcePackage {
 
     private Map<Short, List<Type>> typesMap = new HashMap<>();
 
-    private Map<Integer, Integer> stagedAliasMap = new HashMap<>();
+    private final Map<Integer, Integer> stagedAliasMap = new HashMap<>();
 
     public void addStagedAlias(final int stagedResId, final int finalizedResId) {
         this.stagedAliasMap.put(stagedResId, finalizedResId);
