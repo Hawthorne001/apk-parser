@@ -128,6 +128,50 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                     ?: emptyList()
             val allApkFilePaths = listOf(baseApkPath) + splitApkPaths
 
+            // Verify each APK individually
+            for (apkFilePath in allApkFilePaths) {
+                val isBase = apkFilePath == baseApkPath
+                try {
+                    getZipFilter(apkFilePath, ZIP_FILTER_TYPE).use { filter ->
+                        val individualApkInfo = ApkInfo.internalGetApkInfo(
+                            deviceConfig, filter,
+                            requestParseManifestXmlTagForApkType = GET_APK_TYPE,
+                            requestParseResources = false
+                        )
+                        if (individualApkInfo == null) {
+                            parsingErrorsLiveData.inc()
+                            if (isSystemApp) systemAppsErrorsCountLiveData.inc()
+                            Log.e("AppLog", "can't parse individual apk for \"$packageName\" in: \"$apkFilePath\"")
+                        } else {
+                            if(GET_APK_TYPE) {
+                                val detectedType = individualApkInfo.apkType
+                                val expectedType = if (isBase) ApkInfo.ApkType.BASE_OF_SPLIT_OR_STANDALONE else ApkInfo.ApkType.SPLIT
+                                if (detectedType != expectedType) {
+                                    wrongApkTypeErrorsLiveData.inc()
+                                    if (isSystemApp) systemAppsErrorsCountLiveData.inc()
+                                    Log.e("AppLog", "wrong apk type for \"$packageName\" in: \"$apkFilePath\". Expected $expectedType but got $detectedType isSystemApp?$isSystemApp")
+                                }
+                            }
+                            val indApkMeta = individualApkInfo.apkMetaTranslator.apkMeta
+                            if (packageInfo.packageName != indApkMeta.packageName) {
+                                wrongPackageNameErrorsLiveData.inc()
+                                if (isSystemApp) systemAppsErrorsCountLiveData.inc()
+                                Log.e("AppLog", "apk package name is different for $apkFilePath : correct one is: \"${packageInfo.packageName}\" vs found: \"${indApkMeta.packageName}\" isSystemApp?$isSystemApp")
+                            }
+                            if (versionCodeCompat(packageInfo) != indApkMeta.versionCode) {
+                                wrongVersionCodeErrorsLiveData.inc()
+                                if (isSystemApp) systemAppsErrorsCountLiveData.inc()
+                                Log.e("AppLog", "apk version code is different for \"$packageName\" on $apkFilePath : correct one is: ${versionCodeCompat(packageInfo)} vs found: ${indApkMeta.versionCode} isSystemApp?$isSystemApp")
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("AppLog", "error during individual apk check for $apkFilePath", e)
+                }
+                apkFilesHandledLiveData.inc()
+                ++apksHandledSoFar
+            }
+
             // Always build master table if splits exist, to ensure correct labels/icons
             val apkInfo = try {
                 val filters = allApkFilePaths.map { getZipFilter(it, ZIP_FILTER_TYPE) }
@@ -184,7 +228,9 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
 
                 else -> {}
             }
-            val apkMeta = currentApkInfo.apkMetaTranslator.apkMeta
+            val apkMetaTranslator = currentApkInfo.apkMetaTranslator
+            val apkMeta = apkMetaTranslator.apkMeta
+//            Log.d("AppLog", "apk data of $packageName : ${apkMeta.packageName}, ${apkMeta.versionCode}, ${apkMeta.versionName}, ${apkMeta.label}, ${apkMetaTranslator.iconPaths}")
             if (packageInfo.packageName != apkMeta.packageName) {
                 wrongPackageNameErrorsLiveData.inc()
                 if (isSystemApp) systemAppsErrorsCountLiveData.inc()
@@ -276,8 +322,6 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                 }
                 com.lb.apkparserdemo.utils.SessionTracker.addPackage(packageName)
             }
-            apkFilesHandledLiveData.inc()
-            ++apksHandledSoFar
             appsHandledLiveData.inc()
         }
         endTime = System.currentTimeMillis()
