@@ -30,6 +30,8 @@ extensions.configure<LibraryExtension> {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
+
     }
     publishing {
         singleVariant("release") {
@@ -50,6 +52,7 @@ dependencies {
     implementation("org.bouncycastle:bcprov-jdk15on:1.70")
     implementation("org.bouncycastle:bcpkix-jdk15on:1.70")
     implementation("androidx.annotation:annotation:1.10.0")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.5")
 
 }
 
