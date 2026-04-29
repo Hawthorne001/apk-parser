@@ -9,10 +9,7 @@ import net.dongliu.apk.parser.struct.xml.XmlNodeStartTag
 /**
  * @author dongliu
  */
-class CompositeXmlStreamer(vararg xmlStreamers: XmlStreamer) : XmlStreamer {
-    @Suppress("UNCHECKED_CAST")
-    private val xmlStreamers: Array<XmlStreamer> = xmlStreamers as Array<XmlStreamer>
-
+class CompositeXmlStreamer(private vararg val xmlStreamers: XmlStreamer) : XmlStreamer {
     override fun onStartTag(xmlNodeStartTag: XmlNodeStartTag) {
         for (xmlStreamer in xmlStreamers) {
             xmlStreamer.onStartTag(xmlNodeStartTag)
