@@ -14,9 +14,5 @@ class StagedAliasHeader(headerSize: Int, chunkSize: Long, buffer: ByteBuffer) :
     /**
      * uint32 value, The number of staged alias entries that follow this header.
      */
-    val count: Int
-
-    init {
-        count = ensureUInt(Buffers.readUInt(buffer))
-    }
+    val count: Int = ensureUInt(Buffers.readUInt(buffer))
 }

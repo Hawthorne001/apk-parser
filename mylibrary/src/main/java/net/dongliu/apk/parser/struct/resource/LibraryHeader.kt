@@ -16,9 +16,5 @@ class LibraryHeader(headerSize: Int, chunkSize: Long, buffer: ByteBuffer) :
     /**
      * uint32 value, The number of shared libraries linked in this resource table.
      */
-    val count: Int
-
-    init {
-        count = ensureUInt(Buffers.readUInt(buffer))
-    }
+    val count: Int = ensureUInt(Buffers.readUInt(buffer))
 }

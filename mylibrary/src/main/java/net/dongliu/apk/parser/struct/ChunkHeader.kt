@@ -22,7 +22,7 @@ open class ChunkHeader(chunkType: Int, headerSize: Int, chunkSize: Long) {
      * on the containing chunk.
      */
     @JvmField
-    val chunkType: Short
+    val chunkType: Short = Unsigned.toUShort(chunkType)
 
     /**
      * Size of the chunk header (in bytes).  Adding this value to
@@ -30,7 +30,7 @@ open class ChunkHeader(chunkType: Int, headerSize: Int, chunkSize: Long) {
      * (if any).
      */
     @JvmField
-    val headerSize: Short
+    val headerSize: Short = Unsigned.toUShort(headerSize)
 
     /**
      * Total size of this chunk (in bytes).  This is the chunkSize plus
@@ -39,13 +39,7 @@ open class ChunkHeader(chunkType: Int, headerSize: Int, chunkSize: Long) {
      * any child chunks).  If this value is the same as chunkSize, there is
      * no data associated with the chunk.
      */
-    val chunkSize: Int
-
-    init {
-        this.chunkType = Unsigned.toUShort(chunkType)
-        this.headerSize = Unsigned.toUShort(headerSize)
-        this.chunkSize = Unsigned.ensureUInt(chunkSize)
-    }
+    val chunkSize: Int = Unsigned.ensureUInt(chunkSize)
 
     val bodySize: Int
         get() = chunkSize - headerSize
