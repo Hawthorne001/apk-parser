@@ -213,6 +213,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                     Log.e("AppLog", "fetching error: can\'t get app icon for \"$packageName\" in: \"$baseApkPath\"")
                 }
             }
+            @Suppress("SimplifyBooleanWithConstants")
             when {
                 GET_APK_TYPE && currentApkInfo.apkType == ApkInfo.ApkType.UNKNOWN -> {
                     wrongApkTypeErrorsLiveData.inc()
@@ -237,6 +238,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                 Log.e("AppLog", "apk package name is different for $baseApkPath : " + "correct one is: \"${packageInfo.packageName}\" vs found: \"${apkMeta.packageName}\" isSystemApp?$isSystemApp")
             }
             //compare version name using library vs framework
+            @Suppress("SimplifyBooleanWithConstants")
             if (VALIDATE_RESOURCES && packageInfo.versionName != apkMeta.versionName) {
                 wrongVersionNameErrorsLiveData.inc()
                 if (isSystemApp) systemAppsErrorsCountLiveData.inc()

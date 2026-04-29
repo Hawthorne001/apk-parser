@@ -686,14 +686,14 @@ object XmlDrawableParser {
     }
 
     private fun addPathNodesToPath(nodes: List<PathNode>, path: Path) {
-        var currentX = 0f;
-        var currentY = 0f;
-        var segmentX = 0f;
+        var currentX = 0f
+        var currentY = 0f
+        var segmentX = 0f
         var segmentY = 0f
-        var lastControlX = Float.NaN;
+        var lastControlX = Float.NaN
         var lastControlY = Float.NaN
         for (node in nodes) {
-            var nextControlX = Float.NaN;
+            var nextControlX = Float.NaN
             var nextControlY = Float.NaN
             when (node) {
                 is PathNode.Close -> {
@@ -753,27 +753,27 @@ object XmlDrawableParser {
                 }
 
                 is PathNode.RelativeArcTo -> {
-                    val nextX = currentX + node.arcStartDx;
+                    val nextX = currentX + node.arcStartDx
                     val nextY = currentY + node.arcStartDy; drawArc(path, currentX.toDouble(), currentY.toDouble(), nextX.toDouble(), nextY.toDouble(), node.horizontalEllipseRadius.toDouble(), node.verticalEllipseRadius.toDouble(), node.theta.toDouble(), node.isMoreThanHalf, node.isPositiveArc); currentX = nextX; currentY = nextY
                 }
 
                 is PathNode.ReflectiveCurveTo -> {
-                    val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX;
+                    val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX
                     val cy = if (lastControlY.isNaN()) currentY else 2 * currentY - lastControlY; path.cubicTo(cx, cy, node.x1, node.y1, node.x2, node.y2); nextControlX = node.x1; nextControlY = node.y1; currentX = node.x2; currentY = node.y2
                 }
 
                 is PathNode.RelativeReflectiveCurveTo -> {
-                    val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX;
+                    val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX
                     val cy = if (lastControlY.isNaN()) currentY else 2 * currentY - lastControlY; path.cubicTo(cx, cy, currentX + node.dx1, currentY + node.dy1, currentX + node.dx2, currentY + node.dy2); nextControlX = currentX + node.dx1; nextControlY = currentY + node.dy1; currentX += node.dx2; currentY += node.dy2
                 }
 
                 is PathNode.ReflectiveQuadTo -> {
-                    val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX;
+                    val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX
                     val cy = if (lastControlY.isNaN()) currentY else 2 * currentY - lastControlY; path.quadraticTo(cx, cy, node.x, node.y); nextControlX = cx; nextControlY = cy; currentX = node.x; currentY = node.y
                 }
 
                 is PathNode.RelativeReflectiveQuadTo -> {
-                    val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX;
+                    val cx = if (lastControlX.isNaN()) currentX else 2 * currentX - lastControlX
                     val cy = if (lastControlY.isNaN()) currentY else 2 * currentY - lastControlY; path.quadraticTo(cx, cy, currentX + node.dx, currentY + node.dy); nextControlX = cx; nextControlY = cy; currentX += node.dx; currentY += node.dy
                 }
             }
@@ -783,35 +783,35 @@ object XmlDrawableParser {
 
     private fun drawArc(path: Path, x0: Double, y0: Double, x1: Double, y1: Double, a: Double, b: Double, theta: Double, isLargeArc: Boolean, isSweep: Boolean) {
         if (x0 == x1 && y0 == y1) return
-        var rx = abs(a);
+        var rx = abs(a)
         var ry = abs(b)
         if (rx == 0.0 || ry == 0.0) {
             path.lineTo(x1.toFloat(), y1.toFloat()); return
         }
-        val thetaRad = Math.toRadians(theta);
-        val cosTheta = cos(thetaRad);
+        val thetaRad = Math.toRadians(theta)
+        val cosTheta = cos(thetaRad)
         val sinTheta = sin(thetaRad)
-        val dx2 = (x0 - x1) / 2.0;
+        val dx2 = (x0 - x1) / 2.0
         val dy2 = (y0 - y1) / 2.0
-        val x1p = cosTheta * dx2 + sinTheta * dy2;
+        val x1p = cosTheta * dx2 + sinTheta * dy2
         val y1p = -sinTheta * dx2 + cosTheta * dy2
         val lambda = (x1p * x1p) / (rx * rx) + (y1p * y1p) / (ry * ry)
         if (lambda > 1.0) {
             rx *= sqrt(lambda); ry *= sqrt(lambda)
         }
-        val rxSq = rx * rx;
-        val rySq = ry * ry;
-        val x1pSq = x1p * x1p;
+        val rxSq = rx * rx
+        val rySq = ry * ry
+        val x1pSq = x1p * x1p
         val y1pSq = y1p * y1p
         var radicand = (rxSq * rySq - rxSq * y1pSq - rySq * x1pSq) / (rxSq * y1pSq + rySq * x1pSq)
         radicand = max(0.0, radicand)
         val coef = (if (isLargeArc == isSweep) -1.0 else 1.0) * sqrt(radicand)
-        val cxp = coef * ((rx * y1p) / ry);
+        val cxp = coef * ((rx * y1p) / ry)
         val cyp = coef * (-(ry * x1p) / rx)
-        val cx = cosTheta * cxp - sinTheta * cyp + (x0 + x1) / 2.0;
+        val cx = cosTheta * cxp - sinTheta * cyp + (x0 + x1) / 2.0
         val cy = sinTheta * cxp + cosTheta * cyp + (y0 + y1) / 2.0
         fun angle(ux: Double, uy: Double, vx: Double, vy: Double): Double {
-            val dot = ux * vx + uy * vy;
+            val dot = ux * vx + uy * vy
             val len = sqrt(ux * ux + uy * uy) * sqrt(vx * vx + vy * vy)
             if (len == 0.0) return 0.0
             var ang = acos(max(-1.0, min(1.0, dot / len)))
@@ -825,13 +825,13 @@ object XmlDrawableParser {
         val numSegments = ceil(abs(deltaAngle) / (PI / 2.0)).toInt()
         var angle = startAngle
         for (i in 0 until numSegments) {
-            val segmentDelta = deltaAngle / numSegments;
-            val bx = rx * cos(angle + segmentDelta);
+            val segmentDelta = deltaAngle / numSegments
+            val bx = rx * cos(angle + segmentDelta)
             val by = ry * sin(angle + segmentDelta)
-            val t = 4.0 / 3.0 * tan(segmentDelta / 4.0);
-            val x2 = rx * cos(angle) - t * ry * sin(angle);
+            val t = 4.0 / 3.0 * tan(segmentDelta / 4.0)
+            val x2 = rx * cos(angle) - t * ry * sin(angle)
             val y2 = ry * sin(angle) + t * rx * cos(angle)
-            val x3 = bx + t * rx * sin(angle + segmentDelta);
+            val x3 = bx + t * rx * sin(angle + segmentDelta)
             val y3 = by - t * rx * cos(angle + segmentDelta)
             val ex = if (i == numSegments - 1) x1.toFloat() else (cosTheta * bx - sinTheta * by + cx).toFloat()
             val ey = if (i == numSegments - 1) y1.toFloat() else (sinTheta * bx + cosTheta * by + cy).toFloat()
@@ -896,7 +896,7 @@ object XmlDrawableParser {
     }
 
     private fun parseColorStateList(context: Context, bytes: ByteArray, apkInfo: ApkInfo, deviceConfig: DeviceConfig?, subResourceProvider: ((String) -> ByteArray?)?): Color {
-        var res = Color.Transparent;
+        var res = Color.Transparent
         var def = Color.Transparent
         val streamer = object : XmlStreamer {
             override fun onStartTag(tag: XmlNodeStartTag) {
@@ -933,20 +933,20 @@ object XmlDrawableParser {
     }
 
     private class GradientStreamer(private val context: Context, private val apkInfo: ApkInfo, private val deviceConfig: DeviceConfig?, private val subResourceProvider: ((String) -> ByteArray?)?) : XmlStreamer {
-        var brush: Brush? = null;
-        private var type: String? = null;
-        private var startColor = Color.Transparent;
-        private var endColor = Color.Transparent;
+        var brush: Brush? = null
+        private var type: String? = null
+        private var startColor = Color.Transparent
+        private var endColor = Color.Transparent
         private var centerColor: Color? = null
-        private var sx = 0f;
-        private var sy = 0f;
-        private var ex = 0f;
-        private var ey = 0f;
-        private var cx = 0f;
-        private var cy = 0f;
-        private var gr = 0f;
+        private var sx = 0f
+        private var sy = 0f
+        private var ex = 0f
+        private var ey = 0f
+        private var cx = 0f
+        private var cy = 0f
+        private var gr = 0f
         private var angle = 0f
-        private val stops = mutableListOf<Float>();
+        private val stops = mutableListOf<Float>()
         private val colors = mutableListOf<Color>()
         private fun Attributes.getAttr(name: String) = (this[name]
                 ?: this["android:$name"])?.toStringValue(apkInfo.resourceTable, deviceConfig)
@@ -986,9 +986,11 @@ object XmlDrawableParser {
 
         override fun onEndTag(tag: XmlNodeEndTag) {
             if (tag.name == "gradient") {
-                val fcolors = if (colors.isNotEmpty()) colors else (centerColor?.let { listOf(startColor, it, endColor) }
-                        ?: listOf(startColor, endColor))
-                val fstops = if (stops.isNotEmpty()) stops else (if (centerColor != null) listOf(0f, 0.5f, 1f) else listOf(0f, 1f))
+                val fcolors = colors.ifEmpty {
+                    (centerColor?.let { listOf(startColor, it, endColor) }
+                            ?: listOf(startColor, endColor))
+                }
+                val fstops = stops.ifEmpty { (if (centerColor != null) listOf(0f, 0.5f, 1f) else listOf(0f, 1f)) }
                 val stopsArray = fstops.zip(fcolors).toTypedArray()
                 brush = when (type) {
                     "radial" -> Brush.radialGradient(colorStops = stopsArray, center = androidx.compose.ui.geometry.Offset(cx, cy), radius = gr)
@@ -1015,7 +1017,7 @@ object XmlDrawableParser {
     }
 
     private fun imageBrushDrawable(context: Context, brush: Brush, size: Int): Drawable {
-        val b = createBitmap(size, size);
+        val b = createBitmap(size, size)
         val canvas = Canvas(android.graphics.Canvas(b))
         CanvasDrawScope().draw(Density(context.resources.displayMetrics.density), LayoutDirection.Ltr, canvas, androidx.compose.ui.geometry.Size(size.toFloat(), size.toFloat())) { drawRect(brush) }
         return VectorBitmapDrawable(context, b)
