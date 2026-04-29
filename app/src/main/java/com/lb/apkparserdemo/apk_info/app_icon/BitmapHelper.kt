@@ -23,14 +23,13 @@ object BitmapHelper {
         bitmapOptions.inTargetDensity = 1
         if (height <= reqHeight && width <= reqWidth)
             return
-        if (height > reqHeight || width > reqWidth)
-            if (width > height && reqHeight >= 1) {
-                preferHeight = true
-                sampleSize = (height.toFloat() / reqHeight.toFloat()).roundToInt()
-            } else if (reqWidth >= 1) {
-                sampleSize = (width.toFloat() / reqWidth.toFloat()).roundToInt()
-                preferHeight = false
-            }
+        if (width > height && reqHeight >= 1) {
+            preferHeight = true
+            sampleSize = (height.toFloat() / reqHeight.toFloat()).roundToInt()
+        } else if (reqWidth >= 1) {
+            sampleSize = (width.toFloat() / reqWidth.toFloat()).roundToInt()
+            preferHeight = false
+        }
         // as much as possible, use google's way to downsample:
         while (bitmapOptions.inSampleSize * 2 <= sampleSize)
             bitmapOptions.inSampleSize *= 2
