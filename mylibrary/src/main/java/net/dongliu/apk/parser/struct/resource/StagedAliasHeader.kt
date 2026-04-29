@@ -10,9 +10,14 @@ import java.nio.ByteBuffer
  * A chunk of data that contains mapping from staged resource IDs to finalized resource IDs.
  */
 class StagedAliasHeader(headerSize: Int, chunkSize: Long, buffer: ByteBuffer) :
-    ChunkHeader(ChunkType.TABLE_STAGED_ALIAS, headerSize, chunkSize) {
+        ChunkHeader(ChunkType.TABLE_STAGED_ALIAS, headerSize, chunkSize) {
     /**
      * uint32 value, The number of staged alias entries that follow this header.
      */
-    val count: Int = ensureUInt(Buffers.readUInt(buffer))
+    @Suppress("JoinDeclarationAndAssignment")
+    val count: Int
+
+    init {
+        count = ensureUInt(Buffers.readUInt(buffer))
+    }
 }

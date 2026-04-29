@@ -18,7 +18,12 @@ import java.security.cert.X509Certificate
  * see https://source.android.com/security/apksigning/v2
  */
 class ApkSignBlockParser(data: ByteBuffer) {
-    private val data: ByteBuffer = data.order(ByteOrder.LITTLE_ENDIAN)
+    @Suppress("JoinDeclarationAndAssignment")
+    private val data: ByteBuffer
+
+    init {
+        this.data = data.order(ByteOrder.LITTLE_ENDIAN)
+    }
 
     @Throws(CertificateException::class)
     fun parse(): ApkSigningBlock {
@@ -76,7 +81,7 @@ class ApkSignBlockParser(data: ByteBuffer) {
         while (buffer.hasRemaining()) {
             val certificateData = readLenPrefixData(buffer)
             val certificate = certificateFactory.generateCertificate(
-                ByteArrayInputStream(Buffers.readBytes(certificateData))
+                    ByteArrayInputStream(Buffers.readBytes(certificateData))
             )
             certificates.add(certificate as X509Certificate)
         }

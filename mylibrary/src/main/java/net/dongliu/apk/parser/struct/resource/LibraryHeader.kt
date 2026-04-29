@@ -12,9 +12,14 @@ import java.nio.ByteBuffer
  * @author Liu Dong
  */
 class LibraryHeader(headerSize: Int, chunkSize: Long, buffer: ByteBuffer) :
-    ChunkHeader(ChunkType.TABLE_LIBRARY, headerSize, chunkSize) {
+        ChunkHeader(ChunkType.TABLE_LIBRARY, headerSize, chunkSize) {
     /**
      * uint32 value, The number of shared libraries linked in this resource table.
      */
-    val count: Int = ensureUInt(Buffers.readUInt(buffer))
+    @Suppress("JoinDeclarationAndAssignment")
+    val count: Int
+
+    init {
+        count = ensureUInt(Buffers.readUInt(buffer))
+    }
 }
