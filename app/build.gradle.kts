@@ -15,7 +15,7 @@ extensions.configure<ApplicationExtension> {
     defaultConfig {
         applicationId = "com.lb.apkparserdemo"
         minSdk = 23
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0"
         multiDexEnabled = true

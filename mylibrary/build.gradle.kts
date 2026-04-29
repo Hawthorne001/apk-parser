@@ -17,7 +17,7 @@ extensions.configure<LibraryExtension> {
         multiDexEnabled = true
     }
     lint {
-        targetSdk = 36
+        targetSdk = 37
     }
 
     buildTypes {
