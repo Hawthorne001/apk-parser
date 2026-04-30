@@ -19,7 +19,7 @@ class ApkInfo(
         val allLocales: Set<Locale> = emptySet()
 ) {
     enum class ApkType {
-        SPLIT, BASE_OF_SPLIT_OR_STANDALONE, UNKNOWN
+        Split, BaseOfSplitOrStandalone, Unknown
     }
 
     companion object {
@@ -97,12 +97,12 @@ class ApkInfo(
                 throw e
             }
             if (!requestParseManifestXmlTagForApkType) {
-                return ApkInfo(xmlTranslator, apkMetaTranslator, ApkType.UNKNOWN, resourceTable, allLocales)
+                return ApkInfo(xmlTranslator, apkMetaTranslator, ApkType.Unknown, resourceTable, allLocales)
             }
             val apkMeta = apkMetaTranslator.apkMeta
             val isSplitApk = !apkMeta.split.isNullOrEmpty()
             if (isSplitApk) {
-                return ApkInfo(xmlTranslator, apkMetaTranslator, ApkType.SPLIT, resourceTable, allLocales)
+                return ApkInfo(xmlTranslator, apkMetaTranslator, ApkType.Split, resourceTable, allLocales)
             }
             //standalone or base of split apks
             val isDefinitelyBaseApkOfSplit = apkMeta.isSplitRequired
@@ -110,27 +110,27 @@ class ApkInfo(
                 return ApkInfo(
                         xmlTranslator,
                         apkMetaTranslator,
-                        ApkType.BASE_OF_SPLIT_OR_STANDALONE,
+                        ApkType.BaseOfSplitOrStandalone,
                         resourceTable,
                         allLocales
                 )
             }
             val manifestXml = xmlTranslator.xml
-            var apkType: ApkType = ApkType.BASE_OF_SPLIT_OR_STANDALONE
+            var apkType: ApkType = ApkType.BaseOfSplitOrStandalone
             try {
                 val manifestXmlTag: XmlTag? = XmlTag.getXmlFromString(manifestXml)
                 manifestXmlTag?.let { tag ->
                     val requiredSplitTypesInManifestTag: String? =
                             tag.tagAttributes?.get("android:requiredSplitTypes")
                     if (!requiredSplitTypesInManifestTag.isNullOrEmpty()) {
-                        apkType = ApkType.BASE_OF_SPLIT_OR_STANDALONE
+                        apkType = ApkType.BaseOfSplitOrStandalone
                     }
                     val splitTypesInManifestTag: String? = tag.tagAttributes?.get("android:splitTypes")
                     if (splitTypesInManifestTag != null) {
                         apkType = if (splitTypesInManifestTag.isEmpty()) {
-                            ApkType.BASE_OF_SPLIT_OR_STANDALONE
+                            ApkType.BaseOfSplitOrStandalone
                         } else {
-                            ApkType.SPLIT
+                            ApkType.Split
                         }
                     }
                     tag.innerTagsAndContent?.forEach { manifestXmlItem: Any ->
@@ -147,7 +147,7 @@ class ApkInfo(
                                     ?: tagAttributes["name"] ?: continue
                             when (attributeValueForName) {
                                 "com.android.vending.splits" -> {
-                                    apkType = ApkType.BASE_OF_SPLIT_OR_STANDALONE
+                                    apkType = ApkType.BaseOfSplitOrStandalone
                                     break
                                 }
 
@@ -155,13 +155,13 @@ class ApkInfo(
                                     val value = tagAttributes["android:value"]
                                             ?: tagAttributes["value"] ?: continue
                                     if (value != "false") {
-                                        apkType = ApkType.BASE_OF_SPLIT_OR_STANDALONE
+                                        apkType = ApkType.BaseOfSplitOrStandalone
                                         break
                                     }
                                 }
 
                                 "com.android.vending.splits.required" -> {
-                                    apkType = ApkType.BASE_OF_SPLIT_OR_STANDALONE
+                                    apkType = ApkType.BaseOfSplitOrStandalone
                                     break
                                 }
                             }

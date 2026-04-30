@@ -145,7 +145,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                         } else {
                             if(GET_APK_TYPE) {
                                 val detectedType = individualApkInfo.apkType
-                                val expectedType = if (isBase) ApkInfo.ApkType.BASE_OF_SPLIT_OR_STANDALONE else ApkInfo.ApkType.SPLIT
+                                val expectedType = if (isBase) ApkInfo.ApkType.BaseOfSplitOrStandalone else ApkInfo.ApkType.Split
                                 if (detectedType != expectedType) {
                                     wrongApkTypeErrorsLiveData.inc()
                                     if (isSystemApp) systemAppsErrorsCountLiveData.inc()
@@ -215,13 +215,13 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             }
             @Suppress("SimplifyBooleanWithConstants")
             when {
-                GET_APK_TYPE && currentApkInfo.apkType == ApkInfo.ApkType.UNKNOWN -> {
+                GET_APK_TYPE && currentApkInfo.apkType == ApkInfo.ApkType.Unknown -> {
                     wrongApkTypeErrorsLiveData.inc()
                     if (isSystemApp) systemAppsErrorsCountLiveData.inc()
                     Log.e("AppLog", "can\'t get apk type for \"$packageName\" in: \"$baseApkPath\" isSystemApp?$isSystemApp")
                 }
 
-                GET_APK_TYPE && currentApkInfo.apkType == ApkInfo.ApkType.SPLIT -> {
+                GET_APK_TYPE && currentApkInfo.apkType == ApkInfo.ApkType.Split -> {
                     wrongApkTypeErrorsLiveData.inc()
                     if (isSystemApp) systemAppsErrorsCountLiveData.inc()
                     Log.e("AppLog", "detected as split apk, but in fact a main apk, for \"$packageName\" in: \"$baseApkPath\" isSystemApp?$isSystemApp")
