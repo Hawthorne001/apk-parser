@@ -3,7 +3,6 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/action_toggle_theme"
-        android:title="@string/action_toggle_theme"
-        android:icon="@android:drawable/ic_menu_manage"
+        android:title="@string/action_toggle_theme" android:icon="@drawable/dark_mode_24px"
         app:showAsAction="ifRoom" />
 </menu>

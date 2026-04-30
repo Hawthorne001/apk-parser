@@ -1,5 +1,6 @@
 package com.lb.apkparserdemo.activities.comparison
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -58,6 +59,10 @@ class ComparisonActivity : BoundActivity<ActivityComparisonBinding>(ActivityComp
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_comparison, menu)
+        val item = menu.findItem(R.id.action_toggle_theme)
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        item.setIcon(if (isDark) R.drawable.light_mode_24px else R.drawable.dark_mode_24px)
+        item.icon?.setTint(android.graphics.Color.WHITE)
         return true
     }
 
