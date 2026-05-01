@@ -24,16 +24,16 @@ import net.dongliu.apk.parser.struct.resource.Densities
 import java.nio.ByteBuffer
 
 object ApkIconFetcher {
-    interface ZipFilterCreator {
+    fun interface ZipFilterCreator {
         fun generateZipFilter(): AbstractZipFilter
     }
 
     fun getApkIcon(
-        context: Context,
-        deviceConfig: DeviceConfig?,
-        filterGenerator: ZipFilterCreator,
-        apkInfo: ApkInfo,
-        requestedAppIconSize: Int = 0
+            context: Context,
+            deviceConfig: DeviceConfig?,
+            filterGenerator: ZipFilterCreator,
+            apkInfo: ApkInfo,
+            requestedAppIconSize: Int = 0
     ): Bitmap? {
         val apkMeta = apkInfo.apkMetaTranslator.apkMeta
         val iconPaths = apkInfo.apkMetaTranslator.iconPaths
@@ -118,7 +118,8 @@ object ApkIconFetcher {
                 canvas.drawColor(color)
 //                android.util.Log.d("AppLog", "icon fetching for ${apkMeta.packageName}: SUCCESS with Color: $colorPath")
                 return bitmap
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+            }
         }
         return null
     }
@@ -168,13 +169,13 @@ object ApkIconFetcher {
     }
 
     private fun fetchDrawable(
-        context: Context,
-        path: String,
-        bytes: ByteArray?,
-        apkInfo: ApkInfo,
-        deviceConfig: DeviceConfig?,
-        filterGenerator: ZipFilterCreator,
-        requestedAppIconSize: Int
+            context: Context,
+            path: String,
+            bytes: ByteArray?,
+            apkInfo: ApkInfo,
+            deviceConfig: DeviceConfig?,
+            filterGenerator: ZipFilterCreator,
+            requestedAppIconSize: Int
     ): Drawable? {
         if (path.startsWith("#")) {
             return try {
@@ -202,7 +203,8 @@ object ApkIconFetcher {
                         }
                     }
                 }
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+            }
         }
         if (path.startsWith("resourceId:")) {
             val resId = try {
@@ -233,7 +235,8 @@ object ApkIconFetcher {
                                 }
                             }
                         }
-                    } catch (e: Exception) {}
+                    } catch (e: Exception) {
+                    }
                 }
             }
             return null
@@ -265,9 +268,9 @@ object ApkIconFetcher {
             bitmapOptions.inJustDecodeBounds = true
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bitmapOptions)
             BitmapHelper.prepareBitmapOptionsForSampling(
-                bitmapOptions,
-                requestedAppIconSize,
-                requestedAppIconSize
+                    bitmapOptions,
+                    requestedAppIconSize,
+                    requestedAppIconSize
             )
             val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bitmapOptions)
             if (bitmap != null) return bitmap
@@ -285,7 +288,8 @@ object ApkIconFetcher {
                     }
                     decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
                 }
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+            }
         }
         return null
     }

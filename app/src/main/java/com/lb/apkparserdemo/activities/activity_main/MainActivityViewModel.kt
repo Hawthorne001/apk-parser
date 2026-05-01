@@ -205,7 +205,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                 appIcon = ApkIconFetcher.getApkIcon(
                         context, deviceConfig, object : ApkIconFetcher.ZipFilterCreator {
                     override fun generateZipFilter(): AbstractZipFilter =
-                            MultiZipFilter(allApkFilePaths.map { getZipFilter(it, ZIP_FILTER_TYPE) })
+                            MultiZipFilter(allApkFilePaths.map { apkFilePath -> getZipFilter(apkFilePath, ZIP_FILTER_TYPE) })
                 }, currentApkInfo, appIconSize)
                 if (packageInfo.applicationInfo!!.icon != 0 && appIcon == null) {
                     failedGettingAppIconErrorsLiveData.inc()

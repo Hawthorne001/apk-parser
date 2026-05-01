@@ -24,10 +24,12 @@ public class DeviceConfig {
         this.density = density;
     }
 
+    @NonNull
     public static DeviceConfig defaultLocale(@Nullable Locale locale) {
         return new DeviceConfig(locale, 0, 0, 0);
     }
 
+    @NonNull
     public static DeviceConfig create(@Nullable Locale locale, int mcc, int mnc, int density) {
         return new DeviceConfig(locale, mcc, mnc, density);
     }

@@ -45,7 +45,7 @@ tasks.withType<KotlinJvmCompile>().configureEach {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.18.0")
-    implementation("com.google.android.material:material:1.14.0-beta01")
+    implementation("com.google.android.material:material:1.14.0-rc01")
     implementation("androidx.constraintlayout:constraintlayout:2.2.1")
     implementation(project(":mylibrary"))
     // https://mvnrepository.com/artifact/org.apache.commons/commons-compress
@@ -67,8 +67,9 @@ dependencies {
     //  https://developer.android.com/jetpack/androidx/releases/fragment  https://mvnrepository.com/artifact/androidx.fragment/fragment
     implementation("androidx.fragment:fragment-ktx:1.8.9")
 
-    // Compose minimal dependencies
-    val composeBom = platform("androidx.compose:compose-bom:2025.02.00")
+    // Compose minimal dependencies, to be able to get VectorDrawable better
+//    https://developer.android.com/develop/ui/compose/bom
+    val composeBom = platform("androidx.compose:compose-bom:2026.04.01")
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
     // Room
