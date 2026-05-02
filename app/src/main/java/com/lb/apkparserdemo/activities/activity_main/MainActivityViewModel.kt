@@ -99,16 +99,16 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
         var startTime = System.currentTimeMillis()
         val appsToFocusOn = HashSet<String>()
                 .also {
-                    //these apps have tinting done by the OS, so can't do anything about them other than
-                    // trying an honest parsing from the OS (getPackageArchiveInfo if it's a single APK)
-//                    it.add("com.google.android.captiveportallogin")
-//                    it.add("com.android.bips")
-//                    These apps somehow get the correct color though, while getPackageArchiveInfo would make them use a different color:
-//                    it.add("com.google.android.flipendo")
-//                    it.add("com.google.android.packageinstaller")
-//                    it.add("com.android.printspooler")
-//                    it.add("com.android.traceur")
-//                                        it.add("rk.android.app.shortcutmaker")
+                    //fail to get icons of these on the Samsung device:
+
+//                    has image file of spr file format:
+//                    it.add("com.samsung.advp.imssettings")//ImsSettings.apk
+//                    it.add("com.android.nfc")//NfcNci.apk
+
+//                    has bmp files that can't be opened even on Windows OS:
+//                    it.add("com.samsung.crane")//Crane.apk
+                    //                    it.add("com.sec.android.widgetapp.easymodecontactswidget") //EasymodeContactsWidget81.apk
+
                 }
         val installedPackages =
                 packageManager.getInstalledPackagesCompat(PackageManager.GET_META_DATA)
@@ -134,16 +134,16 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                 try {
                     getZipFilter(apkFilePath, ZIP_FILTER_TYPE).use { filter ->
                         val individualApkInfo = ApkInfo.internalGetApkInfo(
-                            deviceConfig, filter,
-                            requestParseManifestXmlTagForApkType = GET_APK_TYPE,
-                            requestParseResources = false
+                                deviceConfig, filter,
+                                requestParseManifestXmlTagForApkType = GET_APK_TYPE,
+                                requestParseResources = false
                         )
                         if (individualApkInfo == null) {
                             parsingErrorsLiveData.inc()
                             if (isSystemApp) systemAppsErrorsCountLiveData.inc()
                             Log.e("AppLog", "can't parse individual apk for \"$packageName\" in: \"$apkFilePath\"")
                         } else {
-                            if(GET_APK_TYPE) {
+                            if (GET_APK_TYPE) {
                                 val detectedType = individualApkInfo.apkType
                                 val expectedType = if (isBase) ApkInfo.ApkType.BaseOfSplitOrStandalone else ApkInfo.ApkType.Split
                                 if (detectedType != expectedType) {
@@ -231,7 +231,7 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             }
             val apkMetaTranslator = currentApkInfo.apkMetaTranslator
             val apkMeta = apkMetaTranslator.apkMeta
-//            Log.d("AppLog", "apk data of $packageName : ${apkMeta.packageName}, ${apkMeta.versionCode}, ${apkMeta.versionName}, ${apkMeta.label}, ${apkMetaTranslator.iconPaths}")
+//            Log.d("AppLog", "apk data of $packageName : ${apkMeta.packageName}, ${apkMeta.versionCode}, ${apkMeta.versionName}, ${apkMeta.label},  ${apkMetaTranslator.iconPaths}")
             if (packageInfo.packageName != apkMeta.packageName) {
                 wrongPackageNameErrorsLiveData.inc()
                 if (isSystemApp) systemAppsErrorsCountLiveData.inc()
@@ -294,7 +294,8 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
                             // as if it weren't installed using getPackageArchiveInfo.
                             // This helps bypass Material You dynamic color overlays (RROs) applied to installed apps.
                             val archiveInfo = packageManager.getPackageArchiveInfo(baseApkPath, 0)
-                            val cleanAppInfo = archiveInfo?.applicationInfo ?: packageInfo.applicationInfo!!
+                            val cleanAppInfo = archiveInfo?.applicationInfo
+                                    ?: packageInfo.applicationInfo!!
                             cleanAppInfo.sourceDir = baseApkPath
                             cleanAppInfo.publicSourceDir = baseApkPath
 

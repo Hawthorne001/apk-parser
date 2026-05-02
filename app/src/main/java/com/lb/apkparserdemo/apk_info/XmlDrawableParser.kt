@@ -144,6 +144,9 @@ object XmlDrawableParser {
                 }
             }
             logSb.append(">")
+//            if (depth == 0) {
+//                android.util.Log.d("AppLog", "icon fetching: XML root tag: $name")
+//            }
 //            android.util.Log.d("AppLogXML", logSb.toString())
 
             when (name) {
@@ -238,7 +241,7 @@ object XmlDrawableParser {
                 }
 
                 "solid" -> {
-                    val builder = drawableStack.peek() as? ShapeBuilder
+                    val builder = (if (drawableStack.isNotEmpty()) drawableStack.peek() else null) as? ShapeBuilder
                     builder?.color = attr.getAttr("color")?.let { resolveColor(context, it, apkInfo, deviceConfig, subResourceProvider) }
                 }
 
@@ -253,7 +256,7 @@ object XmlDrawableParser {
 
                 "background", "foreground", "monochrome" -> {
                     isInsideAdaptiveLayer = true
-                    val builder = drawableStack.peek() as? AdaptiveIconBuilder
+                    val builder = (if (drawableStack.isNotEmpty()) drawableStack.peek() else null) as? AdaptiveIconBuilder
                     builder?.currentSection = name
                     attr.getAttr("drawable")?.let { builder?.setDrawable(it) }
                 }
@@ -263,7 +266,8 @@ object XmlDrawableParser {
                 }
 
                 "item" -> {
-                    val layerList = drawableStack.peek() as? MutableList<LayerItem>
+                    @Suppress("UNCHECKED_CAST")
+                    val layerList = (if (drawableStack.isNotEmpty()) drawableStack.peek() else null) as? MutableList<LayerItem>
                     val drawablePath = attr.getAttr("drawable")
                     val drawable = if (drawablePath != null) resolve(drawablePath, isLayer || isInsideAdaptiveLayer) else null
                     val item = LayerItem(drawable)
@@ -305,6 +309,15 @@ object XmlDrawableParser {
                             ?: Color.Transparent
                     if (depth == 0) result = color.toArgb().toDrawable()
                     else handleFinishedDrawable(color.toArgb().toDrawable())
+                }
+
+                "animated-vector" -> {
+                    val drawablePath = attr.getAttr("drawable")
+                    if (drawablePath != null) {
+//                        android.util.Log.d("AppLog", "icon fetching: resolving drawable from tag <$name>: $drawablePath")
+                        val drawable = resolve(drawablePath, isLayer || isInsideAdaptiveLayer)
+                        if (drawable != null) handleFinishedDrawable(drawable)
+                    }
                 }
             }
             depth++
