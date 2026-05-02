@@ -1,4 +1,4 @@
-package com.lb.apkparserdemo.apk_info.app_icon
+package com.lb.apkparserdemo.utils
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
@@ -6,6 +6,7 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Build.VERSION
 import android.os.Build.VERSION_CODES
+import com.lb.apkparserdemo.R
 
 fun ApplicationInfo.isSystemApp() = this.flags and ApplicationInfo.FLAG_SYSTEM != 0
 
@@ -23,7 +24,7 @@ object AppInfoUtil {
     fun getAppIconSize(context: Context): Int {
         if (appIconSize > 0)
             return appIconSize
-        appIconSize = context.resources.getDimensionPixelSize(com.lb.apkparserdemo.R.dimen.app_icon_size)
+        appIconSize = context.resources.getDimensionPixelSize(R.dimen.app_icon_size)
         return appIconSize
     }
 }

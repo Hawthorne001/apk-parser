@@ -1,4 +1,4 @@
-package com.lb.apkparserdemo.apk_info.app_icon
+package com.lb.apkparserdemo.utils
 
 import android.graphics.BitmapFactory
 import kotlin.math.roundToInt

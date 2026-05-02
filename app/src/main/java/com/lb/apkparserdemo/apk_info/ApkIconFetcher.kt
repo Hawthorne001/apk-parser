@@ -1,4 +1,4 @@
-package com.lb.apkparserdemo.apk_info.app_icon
+package com.lb.apkparserdemo.apk_info
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -11,13 +11,13 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.LayerDrawable
 import android.os.Build
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
-import com.lb.apkparserdemo.apk_info.AbstractZipFilter
-import com.lb.apkparserdemo.apk_info.ApkInfo
-import com.lb.apkparserdemo.apk_info.XmlDrawableParser
+import com.lb.apkparserdemo.utils.AppInfoUtil
+import com.lb.apkparserdemo.utils.BitmapHelper
 import net.dongliu.apk.parser.bean.DeviceConfig
 import net.dongliu.apk.parser.bean.IconPath
 import net.dongliu.apk.parser.struct.resource.Densities
@@ -216,7 +216,7 @@ object ApkIconFetcher {
                 val packageId = resId shr 24
                 if (packageId == 0x01) {
                     try {
-                        val drawable = androidx.core.content.res.ResourcesCompat.getDrawable(context.resources, resId, null)
+                        val drawable = ResourcesCompat.getDrawable(context.resources, resId, null)
                         if (drawable != null) return drawable
                     } catch (e: Exception) {
                     }
