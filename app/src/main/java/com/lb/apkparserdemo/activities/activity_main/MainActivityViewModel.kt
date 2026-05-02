@@ -88,7 +88,6 @@ class MainActivityViewModel(application: Application) : BaseViewModel(applicatio
             @Suppress("DEPRECATION")
             listOf(config.locale)
         }
-//        Locales.matcher=SystemLocaleMatcher()
         val mainLocale = localeList.firstOrNull()
         val densityDpi = applicationContext.resources.displayMetrics.densityDpi
         val deviceConfig = DeviceConfig.create(mainLocale, config.mcc, config.mnc, densityDpi)
