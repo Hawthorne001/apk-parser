@@ -47,8 +47,11 @@ tasks.withType<KotlinJvmCompile>().configureEach {
 
 dependencies {
     implementation(fileTree("libs") { include("*.jar") })
-    implementation("org.bouncycastle:bcprov-jdk15on:1.70")
-    implementation("org.bouncycastle:bcpkix-jdk15on:1.70")
+//   https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk18on
+    implementation("org.bouncycastle:bcprov-jdk18on:1.84")
+    //   https://mvnrepository.com/artifact/org.bouncycastle/bcpkix-jdk18on
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.84")
+//    https://mvnrepository.com/artifact/androidx.annotation/annotation
     implementation("androidx.annotation:annotation:1.10.0")
 }
 
