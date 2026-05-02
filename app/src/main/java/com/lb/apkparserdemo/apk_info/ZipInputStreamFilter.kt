@@ -1,11 +1,12 @@
 package com.lb.apkparserdemo.apk_info
 
+import com.lb.apkparserdemo.utils.closeSilently
 import java.io.Closeable
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
 class ZipInputStreamFilter(private val zipInputStream: ZipInputStream) : AbstractZipFilter(),
-    Closeable {
+        Closeable {
     private var currentEntry: ZipEntry? = null
     private var currentEntryByteArray: ByteArray? = null
     private var entryNames: MutableList<String>? = null
@@ -57,9 +58,6 @@ class ZipInputStreamFilter(private val zipInputStream: ZipInputStream) : Abstrac
     override fun close() {
         currentEntry = null
         currentEntryByteArray = null
-        try {
-            zipInputStream.close()
-        } catch (e: Exception) {
-        }
+        zipInputStream.closeSilently()
     }
 }

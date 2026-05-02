@@ -1,5 +1,6 @@
 package com.lb.apkparserdemo.apk_info
 
+import com.lb.apkparserdemo.utils.closeSilently
 import java.io.Closeable
 import java.util.Enumeration
 import java.util.zip.ZipEntry
@@ -23,8 +24,8 @@ class ZipFileFilter(private val zipFile: ZipFile) : AbstractZipFilter(), Closeab
         get() = zipFile.entries().asSequence().map { it.name }.toList()
 
     override fun getByteArrayForEntries(
-        mandatoryEntriesNames: Set<String>,
-        extraEntriesNames: Set<String>?
+            mandatoryEntriesNames: Set<String>,
+            extraEntriesNames: Set<String>?
     ): HashMap<String, ByteArray>? {
         try {
             val totalItemsCount = mandatoryEntriesNames.size + (extraEntriesNames?.size ?: 0)
@@ -95,10 +96,7 @@ class ZipFileFilter(private val zipFile: ZipFile) : AbstractZipFilter(), Closeab
     override fun close() {
         entries = null
         currentEntry = null
-        try {
-            zipFile.close()
-        } catch (e: Exception) {
-        }
+        zipFile.closeSilently()
     }
 
 }

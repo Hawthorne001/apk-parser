@@ -1,12 +1,13 @@
 package com.lb.apkparserdemo.apk_info
 
+import com.lb.apkparserdemo.utils.closeSilently
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
 import java.io.Closeable
 import java.util.Enumeration
 
 /**Note seems to perform worse than the built in one of Android. Use only if the built in one has some issues*/
 class ApacheZipFileFilter(private val zipFile: org.apache.commons.compress.archivers.zip.ZipFile) :
-    AbstractZipFilter(), Closeable {
+        AbstractZipFilter(), Closeable {
     private var entries: Enumeration<out ZipArchiveEntry>? = null
 
     @Suppress("MemberVisibilityCanBePrivate")
@@ -24,8 +25,8 @@ class ApacheZipFileFilter(private val zipFile: org.apache.commons.compress.archi
         get() = zipFile.entries.asSequence().map { it.name }.toList()
 
     override fun getByteArrayForEntries(
-        mandatoryEntriesNames: Set<String>,
-        extraEntriesNames: Set<String>?
+            mandatoryEntriesNames: Set<String>,
+            extraEntriesNames: Set<String>?
     ): HashMap<String, ByteArray>? {
         try {
             val totalItemsCount = mandatoryEntriesNames.size + (extraEntriesNames?.size ?: 0)
@@ -86,10 +87,7 @@ class ApacheZipFileFilter(private val zipFile: org.apache.commons.compress.archi
     override fun close() {
         entries = null
         currentEntry = null
-        try {
-            zipFile.close()
-        } catch (e: Exception) {
-        }
+        zipFile.closeSilently()
     }
 
 }
