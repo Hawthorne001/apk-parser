@@ -4,8 +4,8 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     id("com.android.application")
-    id("com.google.devtools.ksp") version "2.3.6"
-    id("org.jetbrains.kotlin.plugin.compose") version "2.4.0"
+    id("com.google.devtools.ksp") version "2.3.10"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.4.10"
 }
 
 extensions.configure<ApplicationExtension> {
@@ -49,31 +49,31 @@ tasks.withType<KotlinJvmCompile>().configureEach {
 dependencies {
     implementation("androidx.core:core-ktx:1.19.0")
     implementation("com.google.android.material:material:1.14.0")
-    implementation("androidx.constraintlayout:constraintlayout:2.2.1")
+    implementation("androidx.constraintlayout:constraintlayout:2.2.2")
     implementation(project(":mylibrary"))
     // https://mvnrepository.com/artifact/org.apache.commons/commons-compress
     implementation("org.apache.commons:commons-compress:1.28.0")
 // https://mvnrepository.com/artifact/com.android.tools/desugar_jdk_libs_nio https://github.com/google/desugar_jdk_libs/blob/master/CHANGELOG.md  https://developer.android.com/studio/write/java8-support https://android-developers.googleblog.com/2023/02/api-desugaring-supporting-android-13-and-java-nio.html
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.5")
     //  https://github.com/AndroidDeveloperLB/CommonUtils  https://jitpack.io/#AndroidDeveloperLB/CommonUtils/
-    implementation("com.github.AndroidDeveloperLB:CommonUtils:42")
+    implementation("com.github.AndroidDeveloperLB:CommonUtils:44")
     //    https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-core
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
     //    https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-android
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     //    https://developer.android.com/jetpack/androidx/releases/lifecycle#declaring_dependencies
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0")
-    implementation("androidx.lifecycle:lifecycle-common-java8:2.10.0")
-    implementation("androidx.lifecycle:lifecycle-process:2.10.0")
-    implementation("androidx.lifecycle:lifecycle-service:2.10.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-common-java8:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-process:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-service:2.11.0")
 
     //  https://developer.android.com/jetpack/androidx/releases/fragment  https://mvnrepository.com/artifact/androidx.fragment/fragment
     implementation("androidx.fragment:fragment-ktx:1.8.9")
 
     // Compose minimal dependencies, to be able to get VectorDrawable better
 //    https://developer.android.com/develop/ui/compose/bom
-    implementation(platform("androidx.compose:compose-bom:2026.05.01"))
+    implementation(platform("androidx.compose:compose-bom:2026.06.01"))
     implementation("androidx.compose.ui:ui")
     // Room
     val roomVersion = "2.8.4"
