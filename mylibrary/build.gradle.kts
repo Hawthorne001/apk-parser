@@ -27,6 +27,13 @@ extensions.configure<LibraryExtension> {
         }
     }
 
+    packaging {
+        resources {
+            excludes += "/META-INF/LICENSE.md"
+            excludes += "/META-INF/NOTICE.md"
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -47,7 +54,7 @@ tasks.withType<KotlinJvmCompile>().configureEach {
 
 dependencies {
     implementation(fileTree("libs") { include("*.jar") })
-//   https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk18on
+//   https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk18on https://central.sonatype.com/artifact/org.bouncycastle/bcprov-jdk18on
     implementation("org.bouncycastle:bcprov-jdk18on:1.85")
     //   https://mvnrepository.com/artifact/org.bouncycastle/bcpkix-jdk18on
     implementation("org.bouncycastle:bcpkix-jdk18on:1.85")
