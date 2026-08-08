@@ -13,7 +13,7 @@ extensions.configure<LibraryExtension> {
 
     defaultConfig {
         minSdk = 23
-        consumerProguardFiles("consumer-rules.pro")
+        consumerProguardFiles("src/main/keepRules/consumer.keep")
         multiDexEnabled = true
     }
     lint {
@@ -22,8 +22,8 @@ extensions.configure<LibraryExtension> {
 
     buildTypes {
         getByName("release") {
-//            isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            isMinifyEnabled = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "src/main/keepRules/library-build.keep")
         }
     }
 

@@ -22,9 +22,10 @@ extensions.configure<ApplicationExtension> {
     }
 
     buildTypes {
-        getByName("release") {
-            isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        release {
+            optimization {
+                enable = true
+            }
         }
     }
     packaging {
